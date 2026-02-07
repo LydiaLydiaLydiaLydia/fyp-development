@@ -1,0 +1,44 @@
+[
+  {
+    "host": "192.168.1.7",
+    "port": 8009,
+    "key": "@UnZaX+IE4Y0szeaGF425QZb3G7HNhNXMS8wlbgkoIQg=.ed25519",
+    "address": "net:192.168.1.7:8009~shs:UnZaX+IE4Y0szeaGF425QZb3G7HNhNXMS8wlbgkoIQg=",
+    "source": "manual",
+    "announcers": 99,
+    "duration": {
+      "mean": 11338.795918367347,
+      "stdev": 722.4889372669696,
+      "count": 98,
+      "sum": 1111202,
+      "sqsum": 12650847748
+    },
+    "stateChange": 1770487014240,
+    "client": false,
+    "ping": {
+      "rtt": {
+        "mean": 29,
+        "stdev": 24,
+        "count": 2,
+        "sum": 58,
+        "sqsum": 2834
+      },
+      "skew": {
+        "mean": -9,
+        "stdev": 9.5,
+        "count": 2,
+        "sum": -18,
+        "sqsum": 342.5
+      }
+    },
+    "failure": 0
+  },
+  {
+    "address": "net:192.168.1.7:8010~shs:nhaJo9U9WwPe6guP0Nka/2sNdu1jx1V82a+rwCO2v3s=",
+    "key": "@nhaJo9U9WwPe6guP0Nka/2sNdu1jx1V82a+rwCO2v3s=.ed25519",
+    "announcers": 1,
+    "duration": null,
+    "host": "192.168.1.7",
+    "port": 8010
+  }
+]

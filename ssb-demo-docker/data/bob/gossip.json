@@ -1,0 +1,58 @@
+[
+  {
+    "host": "192.168.1.7",
+    "port": 8008,
+    "key": "@e8Bx/XxMWpZB20Ey1ar5NlrNGSBzVewztG/oYJDY1Us=.ed25519",
+    "address": "net:192.168.1.7:8008~shs:e8Bx/XxMWpZB20Ey1ar5NlrNGSBzVewztG/oYJDY1Us=",
+    "source": "manual",
+    "announcers": 1,
+    "duration": null,
+    "stateChange": 1770487014242,
+    "client": true,
+    "ping": {
+      "rtt": {
+        "mean": 5,
+        "stdev": 0,
+        "count": 1,
+        "sum": 5,
+        "sqsum": 25
+      },
+      "skew": {
+        "mean": 0.5,
+        "stdev": 0,
+        "count": 1,
+        "sum": 0.5,
+        "sqsum": 0.25
+      }
+    },
+    "failure": 0
+  },
+  {
+    "host": "192.168.1.7",
+    "port": 8010,
+    "key": "@nhaJo9U9WwPe6guP0Nka/2sNdu1jx1V82a+rwCO2v3s=.ed25519",
+    "address": "net:192.168.1.7:8010~shs:nhaJo9U9WwPe6guP0Nka/2sNdu1jx1V82a+rwCO2v3s=",
+    "source": "manual",
+    "announcers": 1,
+    "duration": null,
+    "stateChange": 1770487088686,
+    "client": true,
+    "ping": {
+      "rtt": {
+        "mean": 50,
+        "stdev": 0,
+        "count": 1,
+        "sum": 50,
+        "sqsum": 2500
+      },
+      "skew": {
+        "mean": -19,
+        "stdev": 0,
+        "count": 1,
+        "sum": -19,
+        "sqsum": 361
+      }
+    },
+    "failure": 0
+  }
+]
