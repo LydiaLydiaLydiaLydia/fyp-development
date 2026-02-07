@@ -1,44 +1,41 @@
-#Specifying the Docker Compose file format
 version: "3"
 
-#Defines three services
 services:
-  #container name
   alice:
-    #the path to the Dockerfile (from here)
     build: ./ssb
-    #links the container storage to my machine's storage
-    #the folder .data on my Windows machine is linked to the folder /data in the container
-    #this makes sure that alice's follow data, her feed, and her secrets are persisted when 
-    # I shut the containers down 
     volumes:
-      - ./data/alice:/root/.ssb/flume
+      - ./data/alice:/root/.ssb
     container_name: alice-1
     networks:
       net_alice:
         ipv4_address: 10.10.1.10
     ports:
       - "8008:8008"
+      - "8007:8007"  # Alice's SSB peer port
+  
   bob:
     build: ./ssb
     volumes:
-      - ./data/bob:/root/.ssb/flume
+      - ./data/bob:/root/.ssb
     container_name: bob-1
     networks:
       net_bob:
         ipv4_address: 10.10.2.10
     ports:
       - "8009:8008"
+      - "8017:8007"  # Bob's SSB peer port (different external port)
+  
   carol:
     build: ./ssb
     volumes:
-      - ./data/carol:/root/.ssb/flume
+      - ./data/carol:/root/.ssb
     container_name: carol-1
     networks:
       net_carol:
         ipv4_address: 10.10.3.10
     ports:
       - "8010:8008"
+      - "8027:8007"  # Carol's SSB peer port (different external port)
 
 networks:
   net_alice:
@@ -56,4 +53,3 @@ networks:
     ipam:
       config:
         - subnet: 10.10.3.0/24
-    
