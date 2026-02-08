@@ -5,37 +5,37 @@ services:
     build: ./ssb
     volumes:
       - ./data/alice:/root/.ssb
+      - ./discovery:/discovery:rw
     container_name: alice-1
     networks:
       net_alice:
         ipv4_address: 10.10.1.10
     ports:
       - "8008:8008"
-      - "8007:8007"  # Alice's SSB peer port
   
   bob:
     build: ./ssb
     volumes:
       - ./data/bob:/root/.ssb
+      - ./discovery:/discovery:rw
     container_name: bob-1
     networks:
       net_bob:
         ipv4_address: 10.10.2.10
     ports:
       - "8009:8008"
-      - "8017:8007"  # Bob's SSB peer port (different external port)
   
   carol:
     build: ./ssb
     volumes:
       - ./data/carol:/root/.ssb
+      - ./discovery:/discovery:rw
     container_name: carol-1
     networks:
       net_carol:
         ipv4_address: 10.10.3.10
     ports:
       - "8010:8008"
-      - "8027:8007"  # Carol's SSB peer port (different external port)
 
 networks:
   net_alice:
