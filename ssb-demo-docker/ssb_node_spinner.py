@@ -125,6 +125,112 @@ class ssb_network_simulator:
         self.logger.info(f"Cleanup complete: {containers_removed} containers, {networks_removed} networks removed ({cleanup_duration:.2f}s)")
         self.logger.debug("-"*80)
 
+    def create_networks(self):
+        self.logger.info("Creating Docker networks...")
+        network_start = time.time()
+        
+        # Each LAN gets 5 nodes max
+        num_lans = (self.num_nodes + 4) // 5
+        self.logger.debug(f"Creating {num_lans} LANs for {self.num_nodes} nodes")
+        
+        self.networks = []
+        for i in range(num_lans):
+            network_name = f"{self.project_name}-lan-{i+1}"
+            subnet = f"10.10.{i+1}.0/24"
+            
+            self.logger.debug(f"Creating network: {network_name} ({subnet})")
+            
+            try:
+                network = self.client.networks.create(
+                    network_name,
+                    driver="bridge",
+                    ipam=docker.types.IPAMConfig(
+                        pool_configs=[docker.types.IPAMPool(subnet=subnet)]
+                    )
+                )
+                
+                self.networks.append({
+                    'network': network,
+                    'name': network_name,
+                    'subnet': subnet,
+                    'id': network.id
+                })
+                
+                self.logger.info(f"  Created {network_name} ({subnet})")
+                self.logger.debug(f"    Network ID: {network.id}")
+                
+            except Exception as e:
+                self.logger.error(f"  Failed to create {network_name}: {e}")
+                raise
+        
+        network_duration = time.time() - network_start
+        self.logger.info(f"Created {len(self.networks)} networks ({network_duration:.2f}s)")
+        self.logger.debug("-"*80)
+
+    def create_nodes(self):
+        self.logger.info(f"Creating {self.num_nodes} SSB nodes...")
+        nodes_start = time.time()
+        
+        for i in range(self.num_nodes):
+            node_start = time.time()
+            node_name = f"{self.project_name}-node-{i+1}"
+            port = self.base_port + i
+            
+            #Assigning nodes to LANs
+            lan_index = i % len(self.networks)
+            network = self.networks[lan_index]['network']
+            network_name = self.networks[lan_index]['name']
+            
+            # Create data directory
+            node_data_dir = self.data_dir / f"node-{i+1}"
+            node_data_dir.mkdir(exist_ok=True)
+            
+            self.logger.info(f"  Creating {node_name}...")
+            self.logger.debug(f"    Port mapping: {port} -> 8008")
+            self.logger.debug(f"    Network: {network_name}")
+            self.logger.debug(f"    Data directory: {node_data_dir}")
+            
+            try:
+                container = self.client.containers.run(
+                    "ssb-demo-docker-alice",
+                    name=node_name,
+                    hostname=node_name,
+                    detach=True,
+                    ports={
+                        '8008/tcp': port
+                    },
+                    volumes={
+                        str(node_data_dir.absolute()): {'bind': '/root/.ssb', 'mode': 'rw'},
+                        str(self.discovery_dir.absolute()): {'bind': '/discovery', 'mode': 'rw'}
+                    },
+                    network=network.name,
+                    remove=False
+                )
+                
+                node_info = {
+                    'name': node_name,
+                    'container': container,
+                    'port': port,
+                    'lan': lan_index,
+                    'lan_name': network_name,
+                    'id': i + 1,
+                    'container_id': container.id
+                }
+                
+                self.nodes.append(node_info)
+                
+                node_duration = time.time() - node_start
+                self.logger.info(f"    ✓ Created in {node_duration:.2f}s")
+                self.logger.debug(f"    Container ID: {container.id}")
+                
+            except Exception as e:
+                self.logger.error(f"    ✗ Failed to create {node_name}: {e}")
+                raise
+        
+        nodes_duration = time.time() - nodes_start
+        self.logger.info(f"✅ Created {len(self.nodes)} nodes ({nodes_duration:.2f}s)")
+        self.logger.debug("-"*80)
+
     def run(self):
         """Main execution flow."""
         overall_start = time.time()
@@ -137,7 +243,7 @@ class ssb_network_simulator:
         
         try:
             self.cleanup_existing()
-            #self.create_networks()
+            self.create_networks()
             #self.create_nodes()
             
             #if not self.wait_for_nodes_ready():
@@ -253,9 +359,9 @@ def main():
     )
     
     if args.cleanup:
-        print("🧹 Cleanup mode")
+        print("Cleanup mode")
         simulator.cleanup_existing()
-        print("✅ Cleanup complete")
+        print("Cleanup complete")
     else:
         simulator.run()
 
