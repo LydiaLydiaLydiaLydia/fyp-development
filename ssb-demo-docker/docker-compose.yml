@@ -11,7 +11,6 @@ services:
         ipv4_address: 10.10.1.10
     ports:
       - "8008:8008"
-      - "8007:8007"  # Alice's SSB peer port
   
   bob:
     build: ./ssb
@@ -23,7 +22,6 @@ services:
         ipv4_address: 10.10.2.10
     ports:
       - "8009:8008"
-      - "8017:8007"  # Bob's SSB peer port (different external port)
   
   carol:
     build: ./ssb
@@ -35,7 +33,6 @@ services:
         ipv4_address: 10.10.3.10
     ports:
       - "8010:8008"
-      - "8027:8007"  # Carol's SSB peer port (different external port)
 
 networks:
   net_alice:

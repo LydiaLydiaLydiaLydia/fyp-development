@@ -2,27 +2,27 @@
   {
     "host": "192.168.1.7",
     "port": 8008,
-    "key": "@e8Bx/XxMWpZB20Ey1ar5NlrNGSBzVewztG/oYJDY1Us=.ed25519",
-    "address": "net:192.168.1.7:8008~shs:e8Bx/XxMWpZB20Ey1ar5NlrNGSBzVewztG/oYJDY1Us=",
-    "source": "manual",
+    "key": "@uo8hTIweHjSIodOzS2Ug0Na1yEgYGyHBtMV4aluQ45A=.ed25519",
+    "address": "net:192.168.1.7:8008~shs:uo8hTIweHjSIodOzS2Ug0Na1yEgYGyHBtMV4aluQ45A=",
+    "source": "stored",
     "announcers": 1,
     "duration": null,
-    "stateChange": 1770487014242,
-    "client": true,
+    "stateChange": 1770563408287,
+    "client": false,
     "ping": {
       "rtt": {
-        "mean": 5,
+        "mean": 19,
         "stdev": 0,
         "count": 1,
-        "sum": 5,
-        "sqsum": 25
+        "sum": 19,
+        "sqsum": 361
       },
       "skew": {
-        "mean": 0.5,
+        "mean": -1.5,
         "stdev": 0,
         "count": 1,
-        "sum": 0.5,
-        "sqsum": 0.25
+        "sum": -1.5,
+        "sqsum": 2.25
       }
     },
     "failure": 0
@@ -30,27 +30,27 @@
   {
     "host": "192.168.1.7",
     "port": 8010,
-    "key": "@nhaJo9U9WwPe6guP0Nka/2sNdu1jx1V82a+rwCO2v3s=.ed25519",
-    "address": "net:192.168.1.7:8010~shs:nhaJo9U9WwPe6guP0Nka/2sNdu1jx1V82a+rwCO2v3s=",
-    "source": "manual",
-    "announcers": 1,
+    "key": "@cL4dtP2uibZYrB1rYzjOMmmSpxnPzMEAFKmFCmHsiBk=.ed25519",
+    "address": "net:192.168.1.7:8010~shs:cL4dtP2uibZYrB1rYzjOMmmSpxnPzMEAFKmFCmHsiBk=",
+    "source": "stored",
+    "announcers": 2,
     "duration": null,
-    "stateChange": 1770487088686,
+    "stateChange": 1770563409941,
     "client": true,
     "ping": {
       "rtt": {
-        "mean": 50,
+        "mean": 6,
         "stdev": 0,
         "count": 1,
-        "sum": 50,
-        "sqsum": 2500
+        "sum": 6,
+        "sqsum": 36
       },
       "skew": {
-        "mean": -19,
+        "mean": 0,
         "stdev": 0,
         "count": 1,
-        "sum": -19,
-        "sqsum": 361
+        "sum": 0,
+        "sqsum": 0
       }
     },
     "failure": 0

@@ -1,56 +1,56 @@
 [
   {
     "host": "192.168.1.7",
-    "port": 8009,
-    "key": "@UnZaX+IE4Y0szeaGF425QZb3G7HNhNXMS8wlbgkoIQg=.ed25519",
-    "address": "net:192.168.1.7:8009~shs:UnZaX+IE4Y0szeaGF425QZb3G7HNhNXMS8wlbgkoIQg=",
-    "source": "manual",
+    "port": 8008,
+    "key": "@uo8hTIweHjSIodOzS2Ug0Na1yEgYGyHBtMV4aluQ45A=.ed25519",
+    "address": "net:192.168.1.7:8008~shs:uo8hTIweHjSIodOzS2Ug0Na1yEgYGyHBtMV4aluQ45A=",
+    "source": "stored",
     "announcers": 1,
     "duration": null,
-    "stateChange": 1770487088686,
+    "stateChange": 1770563408285,
     "client": false,
     "ping": {
       "rtt": {
-        "mean": 35.8,
-        "stdev": 17.926516672237252,
-        "count": 5,
-        "sum": 179,
-        "sqsum": 8015
+        "mean": 20,
+        "stdev": 0,
+        "count": 1,
+        "sum": 20,
+        "sqsum": 400
       },
       "skew": {
-        "mean": -13.3,
-        "stdev": 10.181355508968341,
-        "count": 5,
-        "sum": -66.5,
-        "sqsum": 1402.75
+        "mean": -5,
+        "stdev": 0,
+        "count": 1,
+        "sum": -5,
+        "sqsum": 25
       }
     },
     "failure": 0
   },
   {
     "host": "192.168.1.7",
-    "port": 8008,
-    "key": "@e8Bx/XxMWpZB20Ey1ar5NlrNGSBzVewztG/oYJDY1Us=.ed25519",
-    "address": "net:192.168.1.7:8008~shs:e8Bx/XxMWpZB20Ey1ar5NlrNGSBzVewztG/oYJDY1Us=",
-    "source": "manual",
+    "port": 8009,
+    "key": "@0Gc9Q+fOYRBUqXkD7WXy9KeJtNLSX9xp4xVZXZYYbfU=.ed25519",
+    "address": "net:192.168.1.7:8009~shs:0Gc9Q+fOYRBUqXkD7WXy9KeJtNLSX9xp4xVZXZYYbfU=",
+    "source": "stored",
     "announcers": 1,
     "duration": null,
-    "stateChange": 1770487530360,
-    "client": true,
+    "stateChange": 1770563409939,
+    "client": false,
     "ping": {
       "rtt": {
-        "mean": 19,
+        "mean": 71,
         "stdev": 0,
         "count": 1,
-        "sum": 19,
-        "sqsum": 361
+        "sum": 71,
+        "sqsum": 5041
       },
       "skew": {
-        "mean": -5.5,
+        "mean": -15.5,
         "stdev": 0,
         "count": 1,
-        "sum": -5.5,
-        "sqsum": 30.25
+        "sum": -15.5,
+        "sqsum": 240.25
       }
     },
     "failure": 0
