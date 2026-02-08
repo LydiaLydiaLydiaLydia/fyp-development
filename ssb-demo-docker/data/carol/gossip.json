@@ -7,7 +7,7 @@
     "source": "stored",
     "announcers": 1,
     "duration": null,
-    "stateChange": 1770563408285,
+    "stateChange": 1770566098354,
     "client": false,
     "ping": {
       "rtt": {
@@ -35,22 +35,22 @@
     "source": "stored",
     "announcers": 1,
     "duration": null,
-    "stateChange": 1770563409939,
+    "stateChange": 1770566098425,
     "client": false,
     "ping": {
       "rtt": {
-        "mean": 71,
+        "mean": 13,
         "stdev": 0,
         "count": 1,
-        "sum": 71,
-        "sqsum": 5041
+        "sum": 13,
+        "sqsum": 169
       },
       "skew": {
-        "mean": -15.5,
+        "mean": -0.5,
         "stdev": 0,
         "count": 1,
-        "sum": -15.5,
-        "sqsum": 240.25
+        "sum": -0.5,
+        "sqsum": 0.25
       }
     },
     "failure": 0

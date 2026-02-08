@@ -7,22 +7,22 @@
     "source": "stored",
     "announcers": 2,
     "duration": null,
-    "stateChange": 1770563408310,
+    "stateChange": 1770566098353,
     "client": true,
     "ping": {
       "rtt": {
-        "mean": 12,
+        "mean": 27,
         "stdev": 0,
         "count": 1,
-        "sum": 12,
-        "sqsum": 144
+        "sum": 27,
+        "sqsum": 729
       },
       "skew": {
-        "mean": 0,
+        "mean": -5.5,
         "stdev": 0,
         "count": 1,
-        "sum": 0,
-        "sqsum": 0
+        "sum": -5.5,
+        "sqsum": 30.25
       }
     },
     "failure": 0
@@ -35,22 +35,22 @@
     "source": "stored",
     "announcers": 2,
     "duration": null,
-    "stateChange": 1770563408286,
+    "stateChange": 1770566098384,
     "client": true,
     "ping": {
       "rtt": {
-        "mean": 21,
+        "mean": 14,
         "stdev": 0,
         "count": 1,
-        "sum": 21,
-        "sqsum": 441
+        "sum": 14,
+        "sqsum": 196
       },
       "skew": {
-        "mean": -1.5,
+        "mean": 1,
         "stdev": 0,
         "count": 1,
-        "sum": -1.5,
-        "sqsum": 2.25
+        "sum": 1,
+        "sqsum": 1
       }
     },
     "failure": 0
