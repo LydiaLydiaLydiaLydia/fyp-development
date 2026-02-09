@@ -1,0 +1,63 @@
+2026-02-09 20:20:37 | DEBUG    | Logging initialized. File: logs\ssb_sim_20260209_202037.log
+2026-02-09 20:20:37 | INFO     | ================================================================================
+2026-02-09 20:20:37 | INFO     | SSB NETWORK SIMULATOR INITIALIZED
+2026-02-09 20:20:37 | INFO     | ================================================================================
+2026-02-09 20:20:37 | INFO     | Configuration:
+2026-02-09 20:20:37 | INFO     |   - Number of nodes: 10
+2026-02-09 20:20:37 | INFO     |   - Friends mode: range
+2026-02-09 20:20:37 | INFO     |   - Friends range: 2-5
+2026-02-09 20:20:37 | INFO     |   - Base port: 8000
+2026-02-09 20:20:37 | INFO     |   - Host IP: 192.168.1.7
+2026-02-09 20:20:37 | INFO     |   - Log file: logs\ssb_sim_20260209_202037.log
+2026-02-09 20:20:37 | INFO     | ================================================================================
+2026-02-09 20:20:37 | INFO     | Cleaning up existing containers and networks...
+2026-02-09 20:20:37 | DEBUG    | Searching for existing containers...
+2026-02-09 20:20:37 | INFO     |   Removing container: ssb-sim-node-10
+2026-02-09 20:20:37 | DEBUG    |     Container ID: d8a03fc6ba677ea7d80aade78d4b6c97b0a06194ae7d132563a99a654c8ff241
+2026-02-09 20:20:48 | DEBUG    |     Stopped ssb-sim-node-10
+2026-02-09 20:20:48 | DEBUG    |     Removed ssb-sim-node-10
+2026-02-09 20:20:48 | INFO     |   Removing container: ssb-sim-node-9
+2026-02-09 20:20:48 | DEBUG    |     Container ID: 2a7a6dd72be854e97f0af4d8ae356e646e3d4ab8d3ce7c48403bd820eea6d0c9
+2026-02-09 20:20:58 | DEBUG    |     Stopped ssb-sim-node-9
+2026-02-09 20:20:58 | DEBUG    |     Removed ssb-sim-node-9
+2026-02-09 20:20:58 | INFO     |   Removing container: ssb-sim-node-8
+2026-02-09 20:20:58 | DEBUG    |     Container ID: a92d3555f146bb260a36bd3c3d61e9c037f70269f8f9efd4181018c31ee839bc
+2026-02-09 20:21:08 | DEBUG    |     Stopped ssb-sim-node-8
+2026-02-09 20:21:08 | DEBUG    |     Removed ssb-sim-node-8
+2026-02-09 20:21:08 | INFO     |   Removing container: ssb-sim-node-7
+2026-02-09 20:21:08 | DEBUG    |     Container ID: 80f16162300c2e10d64d58aba3b668ffcdaba166a9574f51d15efea087d0a82a
+2026-02-09 20:21:19 | DEBUG    |     Stopped ssb-sim-node-7
+2026-02-09 20:21:19 | DEBUG    |     Removed ssb-sim-node-7
+2026-02-09 20:21:19 | INFO     |   Removing container: ssb-sim-node-6
+2026-02-09 20:21:19 | DEBUG    |     Container ID: 5f3a1343e4b8b3beb52b4e00fbc942531f21bba2a2e544cad3bf1d039d58c2ea
+2026-02-09 20:21:29 | DEBUG    |     Stopped ssb-sim-node-6
+2026-02-09 20:21:29 | DEBUG    |     Removed ssb-sim-node-6
+2026-02-09 20:21:29 | INFO     |   Removing container: ssb-sim-node-5
+2026-02-09 20:21:29 | DEBUG    |     Container ID: d2861cc888dd26eeeaa334839783f123795391107b2e4a304a6f6fcc3340da0c
+2026-02-09 20:21:40 | DEBUG    |     Stopped ssb-sim-node-5
+2026-02-09 20:21:40 | DEBUG    |     Removed ssb-sim-node-5
+2026-02-09 20:21:40 | INFO     |   Removing container: ssb-sim-node-4
+2026-02-09 20:21:40 | DEBUG    |     Container ID: 2e10d37d6594af466352c232d1e8c7aa05c6702904d4a5cd191495ed65ac362f
+2026-02-09 20:21:50 | DEBUG    |     Stopped ssb-sim-node-4
+2026-02-09 20:21:50 | DEBUG    |     Removed ssb-sim-node-4
+2026-02-09 20:21:50 | INFO     |   Removing container: ssb-sim-node-3
+2026-02-09 20:21:50 | DEBUG    |     Container ID: 5f92d50017e5738f22e7a02a1cd2e7e26621ae2ca1dc2543f1f7ac8509d2f1a9
+2026-02-09 20:22:01 | DEBUG    |     Stopped ssb-sim-node-3
+2026-02-09 20:22:01 | DEBUG    |     Removed ssb-sim-node-3
+2026-02-09 20:22:01 | INFO     |   Removing container: ssb-sim-node-2
+2026-02-09 20:22:01 | DEBUG    |     Container ID: 2025f9a5040cd9a137a404e80f12bbaaa9ddd03baa0958ada07c511daa8d84e2
+2026-02-09 20:22:11 | DEBUG    |     Stopped ssb-sim-node-2
+2026-02-09 20:22:11 | DEBUG    |     Removed ssb-sim-node-2
+2026-02-09 20:22:11 | INFO     |   Removing container: ssb-sim-node-1
+2026-02-09 20:22:11 | DEBUG    |     Container ID: 7662a1f8a6993f6103cf7fd057df191a38d5cf9e27d63dd7941beb6c6242480b
+2026-02-09 20:22:21 | DEBUG    |     Stopped ssb-sim-node-1
+2026-02-09 20:22:21 | DEBUG    |     Removed ssb-sim-node-1
+2026-02-09 20:22:21 | DEBUG    | Searching for existing networks...
+2026-02-09 20:22:21 | INFO     |   Removing network: ssb-sim-lan-1
+2026-02-09 20:22:21 | DEBUG    |     Network ID: ca2bdb7767916306a0c9a47bfa8d5b3bc50a6bea8a0f959130d3d6646017c70d
+2026-02-09 20:22:22 | DEBUG    |     Removed ssb-sim-lan-1
+2026-02-09 20:22:22 | INFO     |   Removing network: ssb-sim-lan-2
+2026-02-09 20:22:22 | DEBUG    |     Network ID: efe5845317ef11789776902f002526fe9c6fb8b2b7ccdbead16228f38e702281
+2026-02-09 20:22:22 | DEBUG    |     Removed ssb-sim-lan-2
+2026-02-09 20:22:22 | INFO     | Cleanup complete: 10 containers, 2 networks removed (104.97s)
+2026-02-09 20:22:22 | DEBUG    | --------------------------------------------------------------------------------

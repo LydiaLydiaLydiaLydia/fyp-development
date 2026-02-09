@@ -1,0 +1,23 @@
+2026-02-08 20:59:58 | DEBUG    | Logging initialized. File: logs\ssb_sim_20260208_205958.log
+2026-02-08 20:59:58 | INFO     | ================================================================================
+2026-02-08 20:59:58 | INFO     | SSB NETWORK SIMULATOR INITIALIZED
+2026-02-08 20:59:58 | INFO     | ================================================================================
+2026-02-08 20:59:58 | INFO     | Configuration:
+2026-02-08 20:59:58 | INFO     |   - Number of nodes: 10
+2026-02-08 20:59:58 | INFO     |   - Friends mode: range
+2026-02-08 20:59:58 | INFO     |   - Friends range: 2-5
+2026-02-08 20:59:58 | INFO     |   - Base port: 8000
+2026-02-08 20:59:58 | INFO     |   - Host IP: 192.168.1.7
+2026-02-08 20:59:58 | INFO     |   - Log file: logs\ssb_sim_20260208_205958.log
+2026-02-08 20:59:58 | INFO     | ================================================================================
+2026-02-08 20:59:58 | INFO     | Cleaning up existing containers and networks...
+2026-02-08 20:59:58 | DEBUG    | Searching for existing containers...
+2026-02-08 20:59:58 | DEBUG    | Searching for existing networks...
+2026-02-08 20:59:58 | INFO     |   Removing network: ssb-sim-lan-1
+2026-02-08 20:59:58 | DEBUG    |     Network ID: b126647922560fe191db88b613fca1619720568e1117551d146d3becfe4871b0
+2026-02-08 20:59:58 | DEBUG    |     Removed ssb-sim-lan-1
+2026-02-08 20:59:58 | INFO     |   Removing network: ssb-sim-lan-2
+2026-02-08 20:59:58 | DEBUG    |     Network ID: ae5a509ea0c2b1ed749c811e3a922358d654269c350a6a0b1151bf6e8f6e5b32
+2026-02-08 20:59:59 | DEBUG    |     Removed ssb-sim-lan-2
+2026-02-08 20:59:59 | INFO     | Cleanup complete: 0 containers, 2 networks removed (0.68s)
+2026-02-08 20:59:59 | DEBUG    | --------------------------------------------------------------------------------

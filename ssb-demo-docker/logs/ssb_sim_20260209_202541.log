@@ -1,0 +1,147 @@
+2026-02-09 20:25:41 | DEBUG    | Logging initialized. File: logs\ssb_sim_20260209_202541.log
+2026-02-09 20:25:41 | INFO     | ================================================================================
+2026-02-09 20:25:41 | INFO     | SSB NETWORK SIMULATOR INITIALIZED
+2026-02-09 20:25:41 | INFO     | ================================================================================
+2026-02-09 20:25:41 | INFO     | Configuration:
+2026-02-09 20:25:41 | INFO     |   - Number of nodes: 10
+2026-02-09 20:25:41 | INFO     |   - Friends mode: range
+2026-02-09 20:25:41 | INFO     |   - Friends range: 2-5
+2026-02-09 20:25:41 | INFO     |   - Base port: 8000
+2026-02-09 20:25:41 | INFO     |   - Host IP: 192.168.1.7
+2026-02-09 20:25:41 | INFO     |   - Log file: logs\ssb_sim_20260209_202541.log
+2026-02-09 20:25:41 | INFO     | ================================================================================
+2026-02-09 20:25:41 | INFO     | Starting network simulation...
+2026-02-09 20:25:41 | INFO     | Cleaning up existing containers and networks...
+2026-02-09 20:25:41 | DEBUG    | Searching for existing containers...
+2026-02-09 20:25:41 | DEBUG    | Searching for existing networks...
+2026-02-09 20:25:41 | INFO     | Cleanup complete: 0 containers, 0 networks removed (0.01s)
+2026-02-09 20:25:41 | DEBUG    | --------------------------------------------------------------------------------
+2026-02-09 20:25:41 | INFO     | Creating Docker networks...
+2026-02-09 20:25:41 | DEBUG    | Creating 2 LANs for 10 nodes
+2026-02-09 20:25:41 | DEBUG    | Creating network: ssb-sim-lan-1 (10.10.1.0/24)
+2026-02-09 20:25:41 | INFO     |   Created ssb-sim-lan-1 (10.10.1.0/24)
+2026-02-09 20:25:41 | DEBUG    |     Network ID: 88e9da9f8298f19c1423e7b069c83275066930f1ea8d39ce8de38da01c710da5
+2026-02-09 20:25:41 | DEBUG    | Creating network: ssb-sim-lan-2 (10.10.2.0/24)
+2026-02-09 20:25:41 | INFO     |   Created ssb-sim-lan-2 (10.10.2.0/24)
+2026-02-09 20:25:41 | DEBUG    |     Network ID: ffc509a925c6fdf9acfa11b1cbe9e491e61b5e59828bd247a8f8ada4b674a12e
+2026-02-09 20:25:41 | INFO     | Created 2 networks (0.12s)
+2026-02-09 20:25:41 | DEBUG    | --------------------------------------------------------------------------------
+2026-02-09 20:25:41 | INFO     | Creating 10 SSB nodes...
+2026-02-09 20:25:41 | INFO     |   Creating ssb-sim-node-1...
+2026-02-09 20:25:41 | DEBUG    |     Port mapping: 8000 -> 8008
+2026-02-09 20:25:41 | DEBUG    |     Network: ssb-sim-lan-1
+2026-02-09 20:25:41 | DEBUG    |     Data directory: data\node-1
+2026-02-09 20:25:41 | INFO     |     Created in 0.42s
+2026-02-09 20:25:41 | DEBUG    |     Container ID: 0f3a247ff548e364b1036d513d7248dccfd030c90c6ed8fbb82510585b1c1c55
+2026-02-09 20:25:41 | INFO     |   Creating ssb-sim-node-2...
+2026-02-09 20:25:41 | DEBUG    |     Port mapping: 8001 -> 8008
+2026-02-09 20:25:41 | DEBUG    |     Network: ssb-sim-lan-2
+2026-02-09 20:25:41 | DEBUG    |     Data directory: data\node-2
+2026-02-09 20:25:42 | INFO     |     Created in 0.45s
+2026-02-09 20:25:42 | DEBUG    |     Container ID: 812ab39bda18c121f2eec62ddf12590af571481e9d5432ec540c87ee5f4a32aa
+2026-02-09 20:25:42 | INFO     |   Creating ssb-sim-node-3...
+2026-02-09 20:25:42 | DEBUG    |     Port mapping: 8002 -> 8008
+2026-02-09 20:25:42 | DEBUG    |     Network: ssb-sim-lan-1
+2026-02-09 20:25:42 | DEBUG    |     Data directory: data\node-3
+2026-02-09 20:25:43 | INFO     |     Created in 0.67s
+2026-02-09 20:25:43 | DEBUG    |     Container ID: 405c85321a0c06f16e0f3513add78a2a7bab92f07b9a60c7269a63f25c8863e5
+2026-02-09 20:25:43 | INFO     |   Creating ssb-sim-node-4...
+2026-02-09 20:25:43 | DEBUG    |     Port mapping: 8003 -> 8008
+2026-02-09 20:25:43 | DEBUG    |     Network: ssb-sim-lan-2
+2026-02-09 20:25:43 | DEBUG    |     Data directory: data\node-4
+2026-02-09 20:25:44 | INFO     |     Created in 1.04s
+2026-02-09 20:25:44 | DEBUG    |     Container ID: 6521c46bb147c0cdad777bfbb69e11f55ed466534b7ba120db4cc7097b437726
+2026-02-09 20:25:44 | INFO     |   Creating ssb-sim-node-5...
+2026-02-09 20:25:44 | DEBUG    |     Port mapping: 8004 -> 8008
+2026-02-09 20:25:44 | DEBUG    |     Network: ssb-sim-lan-1
+2026-02-09 20:25:44 | DEBUG    |     Data directory: data\node-5
+2026-02-09 20:25:45 | INFO     |     Created in 0.87s
+2026-02-09 20:25:45 | DEBUG    |     Container ID: 812688066dd537cc2cd46a62ff81f639971778c0c2f0fa8806cebc031acffb27
+2026-02-09 20:25:45 | INFO     |   Creating ssb-sim-node-6...
+2026-02-09 20:25:45 | DEBUG    |     Port mapping: 8005 -> 8008
+2026-02-09 20:25:45 | DEBUG    |     Network: ssb-sim-lan-2
+2026-02-09 20:25:45 | DEBUG    |     Data directory: data\node-6
+2026-02-09 20:25:45 | INFO     |     Created in 0.67s
+2026-02-09 20:25:45 | DEBUG    |     Container ID: d14f0562aaf778fe5e6cfa9874e9bc6f35b048992ed9ddec4e78158a476509b1
+2026-02-09 20:25:45 | INFO     |   Creating ssb-sim-node-7...
+2026-02-09 20:25:45 | DEBUG    |     Port mapping: 8006 -> 8008
+2026-02-09 20:25:45 | DEBUG    |     Network: ssb-sim-lan-1
+2026-02-09 20:25:45 | DEBUG    |     Data directory: data\node-7
+2026-02-09 20:25:46 | INFO     |     Created in 0.65s
+2026-02-09 20:25:46 | DEBUG    |     Container ID: 40bdb52882ea3b7a37b3767f9cbd3a9c1b8db5094861fb0b2924048006466e51
+2026-02-09 20:25:46 | INFO     |   Creating ssb-sim-node-8...
+2026-02-09 20:25:46 | DEBUG    |     Port mapping: 8007 -> 8008
+2026-02-09 20:25:46 | DEBUG    |     Network: ssb-sim-lan-2
+2026-02-09 20:25:46 | DEBUG    |     Data directory: data\node-8
+2026-02-09 20:25:47 | INFO     |     Created in 0.73s
+2026-02-09 20:25:47 | DEBUG    |     Container ID: 33a8cf89acfd4241cef85b072c4d486b51f153c4a2a49fdeeb19d2d40a0d4345
+2026-02-09 20:25:47 | INFO     |   Creating ssb-sim-node-9...
+2026-02-09 20:25:47 | DEBUG    |     Port mapping: 8008 -> 8008
+2026-02-09 20:25:47 | DEBUG    |     Network: ssb-sim-lan-1
+2026-02-09 20:25:47 | DEBUG    |     Data directory: data\node-9
+2026-02-09 20:25:48 | INFO     |     Created in 1.18s
+2026-02-09 20:25:48 | DEBUG    |     Container ID: 8c8907841c663ea93e58b612237726cbee7944f60d0bf29c77a20301dbcc0b41
+2026-02-09 20:25:48 | INFO     |   Creating ssb-sim-node-10...
+2026-02-09 20:25:48 | DEBUG    |     Port mapping: 8009 -> 8008
+2026-02-09 20:25:48 | DEBUG    |     Network: ssb-sim-lan-2
+2026-02-09 20:25:48 | DEBUG    |     Data directory: data\node-10
+2026-02-09 20:25:49 | INFO     |     Created in 1.16s
+2026-02-09 20:25:49 | DEBUG    |     Container ID: b271481f72ac2a1852d254b61b6ce20b434403847a13832429562f8198c2a42b
+2026-02-09 20:25:49 | INFO     | Created 10 nodes (7.84s)
+2026-02-09 20:25:49 | DEBUG    | --------------------------------------------------------------------------------
+2026-02-09 20:25:49 | INFO     | Waiting for nodes to be ready (timeout: 60s)...
+2026-02-09 20:25:49 | DEBUG    | Checking if ssb-sim-node-1 is ready...
+2026-02-09 20:25:50 | INFO     |     ssb-sim-node-1 is ready (1/10)
+2026-02-09 20:25:50 | DEBUG    |     Response: {
+  "id": "@5v9CenF0N+MWs2hxKvYh4D/65kBaRKi+t+KRVHcAOdM=.ed25519"
+}...
+2026-02-09 20:25:50 | DEBUG    | Checking if ssb-sim-node-2 is ready...
+2026-02-09 20:25:51 | INFO     |     ssb-sim-node-2 is ready (2/10)
+2026-02-09 20:25:51 | DEBUG    |     Response: {
+  "id": "@NsuRwart/ml4txegrJHbBWiCV8C2TzCLmK3r7gsQfFQ=.ed25519"
+}...
+2026-02-09 20:25:51 | DEBUG    | Checking if ssb-sim-node-3 is ready...
+2026-02-09 20:25:51 | INFO     |     ssb-sim-node-3 is ready (3/10)
+2026-02-09 20:25:51 | DEBUG    |     Response: {
+  "id": "@Y8kJc1gFC2QNPV8Qo4h9D5BQ121qCCrWlTdz/0KTJgY=.ed25519"
+}...
+2026-02-09 20:25:51 | DEBUG    | Checking if ssb-sim-node-4 is ready...
+2026-02-09 20:25:52 | INFO     |     ssb-sim-node-4 is ready (4/10)
+2026-02-09 20:25:52 | DEBUG    |     Response: {
+  "id": "@ViMbCyqdxjo8oUpxelT5wC6JzIZD0FJCWkbNXLRut2g=.ed25519"
+}...
+2026-02-09 20:25:52 | DEBUG    | Checking if ssb-sim-node-5 is ready...
+2026-02-09 20:25:53 | INFO     |     ssb-sim-node-5 is ready (5/10)
+2026-02-09 20:25:53 | DEBUG    |     Response: {
+  "id": "@+BnlmOCAoxZVNa2AehTpi9jChRk6Xms3UGpRwfojcVA=.ed25519"
+}...
+2026-02-09 20:25:53 | DEBUG    | Checking if ssb-sim-node-6 is ready...
+2026-02-09 20:25:53 | INFO     |     ssb-sim-node-6 is ready (6/10)
+2026-02-09 20:25:53 | DEBUG    |     Response: {
+  "id": "@sN9oDEyaeK3DJ+9n/4PsJ579mo+/MIQ592t9tUr0RTI=.ed25519"
+}...
+2026-02-09 20:25:53 | DEBUG    | Checking if ssb-sim-node-7 is ready...
+2026-02-09 20:25:53 | INFO     |     ssb-sim-node-7 is ready (7/10)
+2026-02-09 20:25:53 | DEBUG    |     Response: {
+  "id": "@u79tStUepSn834q3+pH8gGotKW6cWSGmwVcntuX/SYg=.ed25519"
+}...
+2026-02-09 20:25:53 | DEBUG    | Checking if ssb-sim-node-8 is ready...
+2026-02-09 20:25:54 | INFO     |     ssb-sim-node-8 is ready (8/10)
+2026-02-09 20:25:54 | DEBUG    |     Response: {
+  "id": "@U8rpWYKn/90a/UVU/J2KjGJJtgFELF4uf+wee6ULW7g=.ed25519"
+}...
+2026-02-09 20:25:54 | DEBUG    | Checking if ssb-sim-node-9 is ready...
+2026-02-09 20:25:54 | INFO     |     ssb-sim-node-9 is ready (9/10)
+2026-02-09 20:25:54 | DEBUG    |     Response: {
+  "id": "@ztUkNNqPR0d5xMhsqGb0YFDanIK3WV8uiPWZK51qfr4=.ed25519"
+}...
+2026-02-09 20:25:54 | DEBUG    | Checking if ssb-sim-node-10 is ready...
+2026-02-09 20:25:55 | INFO     |     ssb-sim-node-10 is ready (10/10)
+2026-02-09 20:25:55 | DEBUG    |     Response: {
+  "id": "@oqsByyPNxj0DSGFjQNu+hL65phDdiUnWh31UFTl/aZ8=.ed25519"
+}...
+2026-02-09 20:25:55 | INFO     | All 10 nodes ready (5.75s)
+2026-02-09 20:25:55 | DEBUG    | --------------------------------------------------------------------------------
+2026-02-09 20:25:55 | INFO     | ================================================================================
+2026-02-09 20:25:55 | INFO     | SIMULATION COMPLETE - Total time: 13.73s
+2026-02-09 20:25:55 | INFO     | ================================================================================

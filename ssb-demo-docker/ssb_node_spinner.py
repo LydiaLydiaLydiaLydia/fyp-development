@@ -181,7 +181,10 @@ class ssb_network_simulator:
             network = self.networks[lan_index]['network']
             network_name = self.networks[lan_index]['name']
             
-            # Create data directory
+            # Create data directory - like I did in first example, but unsure if I should continue to do so. I suppose for sake of being able to check it later?
+            # Would doing so slow everything down and effect how Docker runs the simulation, if I'm saving data to my local machine?
+            # Or, as this is happening at build time, is it okay? Should I just share the data from the nodes' logs once the entire simulation is over
+            # just to make sure this isn't a factor?
             node_data_dir = self.data_dir / f"node-{i+1}"
             node_data_dir.mkdir(exist_ok=True)
             
@@ -192,7 +195,7 @@ class ssb_network_simulator:
             
             try:
                 container = self.client.containers.run(
-                    "ssb-demo-docker-alice",
+                    "ssb-node",
                     name=node_name,
                     hostname=node_name,
                     detach=True,
@@ -203,7 +206,7 @@ class ssb_network_simulator:
                         str(node_data_dir.absolute()): {'bind': '/root/.ssb', 'mode': 'rw'},
                         str(self.discovery_dir.absolute()): {'bind': '/discovery', 'mode': 'rw'}
                     },
-                    network=network.name,
+                    network=network_name,
                     remove=False
                 )
                 
@@ -220,19 +223,237 @@ class ssb_network_simulator:
                 self.nodes.append(node_info)
                 
                 node_duration = time.time() - node_start
-                self.logger.info(f"    ✓ Created in {node_duration:.2f}s")
+                self.logger.info(f"    Created in {node_duration:.2f}s")
                 self.logger.debug(f"    Container ID: {container.id}")
                 
             except Exception as e:
-                self.logger.error(f"    ✗ Failed to create {node_name}: {e}")
+                self.logger.error(f"    Failed to create {node_name}: {e}")
                 raise
         
         nodes_duration = time.time() - nodes_start
-        self.logger.info(f"✅ Created {len(self.nodes)} nodes ({nodes_duration:.2f}s)")
+        self.logger.info(f"Created {len(self.nodes)} nodes ({nodes_duration:.2f}s)")
         self.logger.debug("-"*80)
 
+    def wait_for_nodes_ready(self, timeout: int = 60):
+        self.logger.info(f"Waiting for nodes to be ready (timeout: {timeout}s)...")
+        wait_start = time.time()
+        
+        ready_nodes = set()
+        check_interval = 2
+        last_log_time = time.time()
+        
+        while len(ready_nodes) < self.num_nodes:
+            elapsed = time.time() - wait_start
+            
+            if elapsed > timeout:
+                self.logger.error(f"Timeout after {timeout}s! Only {len(ready_nodes)}/{self.num_nodes} nodes ready")
+                self.logger.debug(f"Ready nodes: {ready_nodes}")
+                self.logger.debug(f"Not ready: {set(n['name'] for n in self.nodes) - ready_nodes}")
+                break
+            
+            for node in self.nodes:
+                if node['name'] in ready_nodes:
+                    continue
+                
+                try:
+                    self.logger.debug(f"Checking if {node['name']} is ready...")
+                    
+                    result = node['container'].exec_run(
+                        "ssb-server whoami",
+                        stderr=False
+                    )
+                    
+                    if result.exit_code == 0:
+                        ready_nodes.add(node['name'])
+                        self.logger.info(f"    {node['name']} is ready ({len(ready_nodes)}/{self.num_nodes})")
+                        self.logger.debug(f"    Response: {result.output.decode().strip()[:100]}...")
+                    else:
+                        self.logger.debug(f"    Not ready yet (exit code: {result.exit_code})")
+                        
+                except Exception as e:
+                    self.logger.debug(f"    Error checking {node['name']}: {e}")
+            
+            if len(ready_nodes) < self.num_nodes:
+                # Log progress every 10 seconds
+                if time.time() - last_log_time > 10:
+                    self.logger.debug(f"Progress: {len(ready_nodes)}/{self.num_nodes} ready after {elapsed:.1f}s")
+                    last_log_time = time.time()
+                
+                time.sleep(check_interval)
+        
+        wait_duration = time.time() - wait_start
+        
+        if len(ready_nodes) == self.num_nodes:
+            self.logger.info(f"All {len(ready_nodes)} nodes ready ({wait_duration:.2f}s)")
+        else:
+            self.logger.warning(f"Only {len(ready_nodes)}/{self.num_nodes} nodes ready after {wait_duration:.2f}s")
+        
+        self.logger.debug("-"*80)
+        return len(ready_nodes) == self.num_nodes
+    
+    def get_node_info(self, node: Dict) -> Dict:
+        self.logger.debug(f"Getting info for {node['name']}...")
+        
+        try:
+            # Get ID
+            result = node['container'].exec_run(
+                'ssb-server whoami | jq -r \'.id\'',
+                stderr=False
+            )
+            
+            if result.exit_code != 0:
+                self.logger.error(f"  Failed to get whoami for {node['name']}: exit code {result.exit_code}")
+                raise Exception(f"Failed to get node ID")
+            
+            node_id = result.output.decode().strip()
+            self.logger.debug(f"  ID: {node_id}")
+            
+            # Extract key without @ and .ed25519
+            key = node_id.replace('@', '').replace('.ed25519', '')
+            
+            address = f"net:{self.host_ip}:{node['port']}~shs:{key}"
+            
+            info = {
+                'name': node['name'],
+                'id': node_id,
+                'key': key,
+                'host': self.host_ip,
+                'port': node['port'],
+                'address': address
+            }
+            
+            self.logger.debug(f"  Address: {address}")
+            return info
+            
+        except Exception as e:
+            self.logger.error(f"  Error getting info for {node['name']}: {e}")
+            raise
+
+    def establish_connections(self):
+        #The friends 'mode' stuff: allotting nodes with who they should connect with 
+        self.logger.info(f"  Establishing connections (mode: {self.friends_mode})...")
+        connections_start = time.time()
+        
+        # Get info for all nodes
+        self.logger.info("  Gathering node information...")
+        info_start = time.time()
+        
+        node_infos = []
+        for node in self.nodes:
+            try:
+                info = self.get_node_info(node)
+                node_infos.append(info)
+                node['info'] = info
+                self.logger.debug(f"  Got info for {node['name']}")
+            except Exception as e:
+                self.logger.error(f"  Failed to get info for {node['name']}: {e}")
+        
+        info_duration = time.time() - info_start
+        self.logger.info(f"    Gathered info for {len(node_infos)} nodes ({info_duration:.2f}s)")
+        
+        # Establish connections
+        self.logger.info("  Creating peer connections...")
+        connections_made = 0
+        connections_failed = 0
+        connection_details = []
+        
+        for i, node in enumerate(self.nodes):
+            if 'info' not in node:
+                self.logger.warning(f"  Skipping {node['name']} (no info available)")
+                continue
+            
+            # Determine number of friends
+            if self.friends_mode == 'random':
+                num_friends = random.randint(1, self.num_nodes - 1)
+            elif self.friends_mode == 'range':
+                num_friends = random.randint(
+                    min(self.friends_range[0], self.num_nodes - 1),
+                    min(self.friends_range[1], self.num_nodes - 1)
+                )
+            else:  # fixed
+                num_friends = min(self.friends_fixed, self.num_nodes - 1)
+            
+            self.logger.info(f"  {node['name']}: connecting to {num_friends} peers...")
+            self.logger.debug(f"    Mode: {self.friends_mode}, Count: {num_friends}")
+            
+            # Select random friends (excluding self)
+            available_friends = [j for j in range(len(node_infos)) if j != i]
+            friend_indices = random.sample(available_friends, num_friends)
+            
+            node_connections = []
+            for friend_idx in friend_indices:
+                friend = self.nodes[friend_idx]
+                success = self.gossip_and_follow(node, friend)
+                
+                if success:
+                    connections_made += 1
+                    node_connections.append(friend['name'])
+                else:
+                    connections_failed += 1
+            
+            connection_details.append({
+                'node': node['name'],
+                'connections': node_connections,
+                'count': len(node_connections)
+            })
+            
+            self.logger.debug(f"    Connected to: {', '.join(node_connections)}")
+        
+        connections_duration = time.time() - connections_start
+        
+        self.logger.info(f"  Connections complete: {connections_made} successful, {connections_failed} failed ({connections_duration:.2f}s)")
+        
+        # Log detailed connection matrix
+        self.logger.debug("Connection matrix:")
+        for detail in connection_details:
+            self.logger.debug(f"  {detail['node']}: {detail['count']} connections -> {detail['connections']}")
+        
+        self.logger.debug("-"*80)
+        
+        return {
+            'successful': connections_made,
+            'failed': connections_failed,
+            'details': connection_details
+        }
+    
+    def gossip_and_follow(self, node_a: Dict, node_b: Dict) -> bool:
+        self.logger.debug(f"    Connecting {node_a['name']} -> {node_b['name']}...")
+        
+        try:
+            # Gossip connect
+            gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
+            self.logger.debug(f"      Gossip command: {gossip_cmd}")
+            
+            result = node_a['container'].exec_run(gossip_cmd, stderr=True)
+            
+            if result.exit_code != 0:
+                self.logger.warning(f"         Gossip failed (exit {result.exit_code})")
+                self.logger.debug(f"      Output: {result.output.decode()[:200]}")
+                return False
+            
+            self.logger.debug(f"        Gossip successful")
+            
+            # Follow
+            follow_cmd = f'ssb-server publish --type contact --contact "{node_b["info"]["id"]}" --following'
+            self.logger.debug(f"      Follow command: {follow_cmd}")
+            
+            result = node_a['container'].exec_run(follow_cmd, stderr=True)
+            
+            if result.exit_code != 0:
+                self.logger.warning(f"         Follow failed (exit {result.exit_code})")
+                self.logger.debug(f"      Output: {result.output.decode()[:200]}")
+                return False
+            
+            self.logger.debug(f"        Follow successful")
+            self.logger.info(f"      {node_a['name']} -> {node_b['name']}")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"      Error: {node_a['name']} -> {node_b['name']}: {e}")
+            return False
+
     def run(self):
-        """Main execution flow."""
         overall_start = time.time()
         
         print("\n" + "="*80)
@@ -244,12 +465,12 @@ class ssb_network_simulator:
         try:
             self.cleanup_existing()
             self.create_networks()
-            #self.create_nodes()
+            self.create_nodes()
             
-            #if not self.wait_for_nodes_ready():
-                #self.logger.warning("Some nodes failed to start. Continuing anyway...")
+            if not self.wait_for_nodes_ready():
+                self.logger.warning("Some nodes failed to start. Continuing anyway...")
             
-            #connection_stats = self.establish_connections()
+            connection_stats = self.establish_connections()
             #self.print_network_summary()
             #self.save_network_config()
             
@@ -257,14 +478,14 @@ class ssb_network_simulator:
             
             print(f"\nNetwork simulation setup complete! ({overall_duration:.2f}s)")
             print(f"\nSummary:")
-            #print(f"  - Nodes created: {len(self.nodes)}")
-            #print(f"  - Connections: {connection_stats['successful']} successful, {connection_stats['failed']} failed")
+            print(f"  - Nodes created: {len(self.nodes)}")
+            print(f"  - Connections: {connection_stats['successful']} successful, {connection_stats['failed']} failed")
             print(f"  - Log file: {self.log_file}")
             
-            #print(f"\nTo interact with a node:")
-            #print(f"  docker exec -it {self.project_name}-node-1 bash")
-            #print(f"\nTo tear down:")
-            #print(f"  python3 {__file__} --cleanup\n")
+            print(f"\nTo interact with a node:")
+            print(f"  docker exec -it {self.project_name}-node-1 bash")
+            print(f"\nTo tear down:")
+            print(f"  python3 {__file__} --cleanup\n")
             
             self.logger.info("="*80)
             self.logger.info(f"SIMULATION COMPLETE - Total time: {overall_duration:.2f}s")
@@ -281,7 +502,7 @@ class ssb_network_simulator:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='SSB Network Simulator - Create and manage SSB node networks with extensive logging'
+        description='SSB Network Simulator'
     )
     
     parser.add_argument(
