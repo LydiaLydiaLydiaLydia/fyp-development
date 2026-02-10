@@ -11,7 +11,7 @@ from datetime import datetime
 class ssb_network_simulator:
     def __init__ (self, num_nodes: int = 10, friends_mode: str = 'range',
                   friends_range: Tuple[int, int] = (2, 5), friends_fixed: int = 3, 
-                  base_port: int = 8000, host_ip: str = '192.168.1.7',
+                  base_port: int = 8000, host_ip: str = '192.168.56.1',
                   log_file: str = None):
         self.num_nodes = num_nodes
         self.friends_mode = friends_mode # either 'random', 'range', 'fixed'
@@ -305,7 +305,9 @@ class ssb_network_simulator:
                 self.logger.error(f"  Failed to get whoami for {node['name']}: exit code {result.exit_code}")
                 raise Exception(f"Failed to get node ID")
             
-            node_id = result.output.decode().strip()
+            node_id_unparsed = result.output.decode().strip()
+            node_id_parsed = json.loads(node_id_unparsed)
+            node_id = node_id_parsed['id']
             self.logger.debug(f"  ID: {node_id}")
             
             # Extract key without @ and .ed25519
@@ -452,6 +454,22 @@ class ssb_network_simulator:
         except Exception as e:
             self.logger.error(f"      Error: {node_a['name']} -> {node_b['name']}: {e}")
             return False
+        
+    def debug_container_status(self):
+        self.logger.info("Debugging container status...")
+    
+        for node in self.nodes:
+            container = node['container']
+            container.reload()  # Refresh container state
+            
+            self.logger.debug(f"{node['name']} status: {container.status}")
+            
+            if container.status != 'running':
+                self.logger.error(f"  {node['name']} is {container.status}!")
+                
+                # Get logs
+                logs = container.logs(tail=50).decode('utf-8', errors='replace')
+                self.logger.error(f"  Last 50 log lines:\n{logs}")
 
     def run(self):
         overall_start = time.time()
@@ -466,6 +484,7 @@ class ssb_network_simulator:
             self.cleanup_existing()
             self.create_networks()
             self.create_nodes()
+            self.debug_container_status()
             
             if not self.wait_for_nodes_ready():
                 self.logger.warning("Some nodes failed to start. Continuing anyway...")
@@ -550,8 +569,8 @@ def main():
     parser.add_argument(
         '--host-ip',
         type=str,
-        default='192.168.1.7',
-        help='Your host machine IP address (default: 192.168.1.7)'
+        default='192.168.56.1',
+        help='Your host machine IP address (default: 192.168.56.1)'
     )
     
     parser.add_argument(

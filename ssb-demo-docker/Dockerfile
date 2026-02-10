@@ -23,4 +23,4 @@ VOLUME /data
 
 EXPOSE 8008
 
-CMD ["/app/register_node.sh"]
+CMD ["ssb-server", "start", "--host", "0.0.0.0"]
