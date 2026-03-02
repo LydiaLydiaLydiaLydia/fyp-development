@@ -5,7 +5,8 @@ WORKDIR /app
 RUN npm install -g ssb-server
 
 RUN apt-get update && \
-    apt-get install -y jq
+    apt-get install -y jq dos2unix tcpdump net-tools && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY scripts/add.sh /usr/local/bin/add
 COPY scripts/follow.sh /usr/local/bin/follow

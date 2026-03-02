@@ -128,6 +128,14 @@ class ssb_network_simulator:
     def create_networks(self):
         self.logger.info("Creating Docker networks...")
         network_start = time.time()
+
+        #sprint 3: adding in a shared internet (this was the goal eventually
+        # anyway) 
+        self.internet_network = self.client.networks.create(
+            f"{self.project_name}-internet",
+            driver="bridge"
+        )
+        self.logger.info(f" Created internet network")
         
         # Each LAN gets 5 nodes max
         num_lans = (self.num_nodes + 4) // 5
@@ -164,7 +172,7 @@ class ssb_network_simulator:
                 raise
         
         network_duration = time.time() - network_start
-        self.logger.info(f"Created {len(self.networks)} networks ({network_duration:.2f}s)")
+        self.logger.info(f"Created {len(self.networks)} LANs and internet network ({network_duration:.2f}s)")
         self.logger.debug("-"*80)
 
     def create_nodes(self):
@@ -190,7 +198,7 @@ class ssb_network_simulator:
             
             self.logger.info(f"  Creating {node_name}...")
             self.logger.debug(f"    Port mapping: {port} -> 8008")
-            self.logger.debug(f"    Network: {network_name}")
+            self.logger.debug(f"    LAN: {network_name}")
             self.logger.debug(f"    Data directory: {node_data_dir}")
             
             try:
@@ -209,6 +217,10 @@ class ssb_network_simulator:
                     network=network_name,
                     remove=False
                 )
+
+                #sprint 3: adding this part so they connect to the internet network
+                self.internet_network.connect(container)
+                self.logger.debug(f"    Connected to internt network")
                 
                 node_info = {
                     'name': node_name,
@@ -313,7 +325,20 @@ class ssb_network_simulator:
             # Extract key without @ and .ed25519
             key = node_id.replace('@', '').replace('.ed25519', '')
             
+          #  address = f"net:{node['name']}:8008~shs:{key}"
+          ############################################
             address = f"net:{self.host_ip}:{node['port']}~shs:{key}"
+
+            # using docker container to get lan ip
+            container = node['container']
+            container.reload()
+            networks = container.attrs['NetworkSettings']['Networks']
+            internal_ip = networks[node['lan_name']]['IPAddress']
+
+            lan_address = f"net:{internal_ip}:8008~shs:{key}"
+            wan_address = address
+
+            ##################################################
             
             info = {
                 'name': node['name'],
@@ -321,10 +346,14 @@ class ssb_network_simulator:
                 'key': key,
                 'host': self.host_ip,
                 'port': node['port'],
-                'address': address
+                'address': address,
+                'lan_address' : lan_address,
+                'wan_address' : wan_address
             }
             
             self.logger.debug(f"  Address: {address}")
+            self.logger.debug(f"  WAN address: {wan_address}")
+            self.logger.debug(f"  LAN address: {lan_address}")
             return info
             
         except Exception as e:
@@ -352,7 +381,8 @@ class ssb_network_simulator:
         
         info_duration = time.time() - info_start
         self.logger.info(f"    Gathered info for {len(node_infos)} nodes ({info_duration:.2f}s)")
-        
+        #writing to discovery file
+        self.write_all_discovery_files()
         # Establish connections
         self.logger.info("  Creating peer connections...")
         connections_made = 0
@@ -420,10 +450,22 @@ class ssb_network_simulator:
     
     def gossip_and_follow(self, node_a: Dict, node_b: Dict) -> bool:
         self.logger.debug(f"    Connecting {node_a['name']} -> {node_b['name']}...")
-        
+        same_lan = node_a['lan'] == node_b['lan']
+
+        if same_lan:
+            target_address = node_b['info']['lan_address']
+            gossip_cmd = f'ssb-server gossip.connect "{target_address}"'
+            self.logger.debug(f"    Same LAN - dialling directly: {target_address}")
+        else:
+            discovery_file = f"/discovery/{node_b['name']}.json"
+            gossip_cmd = (
+                f'sh -c \'addr=$(jq -r \'.address\' {discovery_file}) && '
+                f'ssb-server gossip.connect "$addr"\''
+            )
+
         try:
             # Gossip connect
-            gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
+            #gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
             self.logger.debug(f"      Gossip command: {gossip_cmd}")
             
             result = node_a['container'].exec_run(gossip_cmd, stderr=True)
@@ -471,6 +513,33 @@ class ssb_network_simulator:
                 logs = container.logs(tail=50).decode('utf-8', errors='replace')
                 self.logger.error(f"  Last 50 log lines:\n{logs}")
 
+    def write_discovery_advertisement(self, node:Dict):
+        # for now: to emulate the concept of real life people sharing ids and addresses
+        # how i'm doing it: a shared folder on local machine that all of them can read and write
+        #use: write_discovery_advertisement(node dictionary)
+        info = node['info']
+        advertisement = {
+            'name': node['name'],
+            'id': info['id'],
+            'address': info['wan_address']
+        }
+
+        discovery_file = self.discovery_dir / f"{node['name']}.json"
+
+        with open(discovery_file, 'w') as f:
+            json.dump(advertisement, f, indent=2)
+
+        self.logger.debug(f"    Written discovery file: {discovery_file}")
+
+    def write_all_discovery_files(self):
+        self.logger.info("Writing discovery advertisements...")
+
+        for node in self.nodes:
+            if 'info' in node:
+                self.write_discovery_advertisement(node)
+
+        self.logger.info(f" Written {len(self.nodes)} advertisement files")
+        
     def run(self):
         overall_start = time.time()
         
