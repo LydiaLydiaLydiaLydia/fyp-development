@@ -17,19 +17,23 @@ class ssb_network_simulator:
         self.friends_mode = friends_mode # either 'random', 'range', 'fixed'
         self.friends_range = friends_range
         self.friends_fixed = friends_fixed
-        self.base_port = base_port
-        self.host_ip = host_ip
+        #self.base_port = base_port
+        #self.host_ip = host_ip
 
         self.client = docker.from_env()
         self.project_name = "ssb-sim"
         self.nodes: List[Dict] = []
 
+        self.networks = []
+        self.router = None
+        self.router_ips = {}
+
         self.data_dir = Path('./data')
-        self.discovery_dir = Path('./discovery')
+        #self.discovery_dir = Path('./discovery')
         self.logs_dir = Path('./logs')
 
         self.data_dir.mkdir(exist_ok=True)
-        self.discovery_dir.mkdir(exist_ok=True)
+        #self.discovery_dir.mkdir(exist_ok=True)
         self.logs_dir.mkdir(exist_ok=True)
 
         if log_file is None:
@@ -50,8 +54,8 @@ class ssb_network_simulator:
             self.logger.info(f"  - Friends range: {self.friends_range[0]}-{self.friends_range[1]}")
         elif self.friends_mode == 'fixed':
             self.logger.info(f"  - Friends fixed: {self.friends_fixed}")
-        self.logger.info(f"  - Base port: {self.base_port}")
-        self.logger.info(f"  - Host IP: {self.host_ip}")
+        #self.logger.info(f"  - Base port: {self.base_port}")
+        #self.logger.info(f"  - Host IP: {self.host_ip}")
         self.logger.info(f"  - Log file: {self.log_file}")
         self.logger.info("="*80)
 
@@ -96,7 +100,7 @@ class ssb_network_simulator:
         # Stop and remove containers
         self.logger.debug("Searching for existing containers...")
         for container in self.client.containers.list(all=True):
-            if container.name.startswith(f"{self.project_name}-node-"):
+            if container.name.startswith(f"{self.project_name}-node-") or container.name.startswith(f"{self.project_name}-router"):
                 self.logger.info(f"  Removing container: {container.name}")
                 self.logger.debug(f"    Container ID: {container.id}")
                 try:
@@ -121,6 +125,7 @@ class ssb_network_simulator:
                 except Exception as e:
                     self.logger.warning(f"    Could not remove network {network.name}: {e}")
         
+
         cleanup_duration = time.time() - cleanup_start
         self.logger.info(f"Cleanup complete: {containers_removed} containers, {networks_removed} networks removed ({cleanup_duration:.2f}s)")
         self.logger.debug("-"*80)
@@ -128,20 +133,12 @@ class ssb_network_simulator:
     def create_networks(self):
         self.logger.info("Creating Docker networks...")
         network_start = time.time()
-
-        #sprint 3: adding in a shared internet (this was the goal eventually
-        # anyway) 
-        self.internet_network = self.client.networks.create(
-            f"{self.project_name}-internet",
-            driver="bridge"
-        )
-        self.logger.info(f" Created internet network")
         
         # Each LAN gets 5 nodes max
         num_lans = (self.num_nodes + 4) // 5
         self.logger.debug(f"Creating {num_lans} LANs for {self.num_nodes} nodes")
         
-        self.networks = []
+        #self.networks = []
         for i in range(num_lans):
             network_name = f"{self.project_name}-lan-{i+1}"
             subnet = f"10.10.{i+1}.0/24"
@@ -172,8 +169,58 @@ class ssb_network_simulator:
                 raise
         
         network_duration = time.time() - network_start
-        self.logger.info(f"Created {len(self.networks)} LANs and internet network ({network_duration:.2f}s)")
+        self.logger.info(f"Created {len(self.networks)} networks ({network_duration:.2f}s)")
         self.logger.debug("-"*80)
+
+    def create_router(self):
+        self.logger.info("Creating router container...")
+
+        # Need starting LAN to connect the first network when creating router contaiener
+        first_network = self.networks[0]['name']
+        try:
+            # Creating the router container from the image
+            self.router = self.client.containers.run(
+                "ssb-router",
+                name=f"{self.project_name}-router",
+                detach=True,
+                network=first_network,
+                sysctls={"net.ipv4.ip_forward": "1"},
+                cap_add=["NET_ADMIN"],
+                remove=False
+            )
+
+            # now looping through the other LANs and attaching to them
+            for net_info in self.networks[1:]:
+                network = net_info['network']
+                self.logger.info(f"  Attaching router to {net_info['name']}")
+                network.connect(self.router)
+
+            self.logger.info(f"Router attached to {len(self.networks)} networks")
+        except Exception as e:
+            self.logger.error(f"Failed to create router: {e}")
+
+    def get_router_ips(self):
+        self.logger.info("Getting router IPs on each LAN...")
+        # for each LAN created, i need the IP address assigned to the 'router' container in order to 
+        # make it the other containers' Default Gateways
+        self.router.reload()
+        #router_ips = {}
+
+        for net_info in self.networks:
+            net_name = net_info['name']
+            # You can do #>docker inspect <container> [things you want to know about in CamelCase] https://docs.docker.com/reference/cli/docker/inspect/
+            # through container.attrs[things you want to know about in CamelCase]
+            # and its a key: value JSON thing returned
+            net_data = self.router.attrs['NetworkSettings']['Networks'][net_name]
+            ip = net_data['IPAddress']
+            self.router_ips[net_name] = ip
+            self.logger.debug(f"  Router IP on {net_name}: {ip}")
+
+        #self.router_ips = router_ips
+        return self.router_ips
+    
+    
+
 
     def create_nodes(self):
         self.logger.info(f"Creating {self.num_nodes} SSB nodes...")
@@ -182,11 +229,11 @@ class ssb_network_simulator:
         for i in range(self.num_nodes):
             node_start = time.time()
             node_name = f"{self.project_name}-node-{i+1}"
-            port = self.base_port + i
+            #port = self.base_port + i
             
             #Assigning nodes to LANs
             lan_index = i % len(self.networks)
-            network = self.networks[lan_index]['network']
+            #network = self.networks[lan_index]['network']
             network_name = self.networks[lan_index]['name']
             
             # Create data directory - like I did in first example, but unsure if I should continue to do so. I suppose for sake of being able to check it later?
@@ -197,8 +244,8 @@ class ssb_network_simulator:
             node_data_dir.mkdir(exist_ok=True)
             
             self.logger.info(f"  Creating {node_name}...")
-            self.logger.debug(f"    Port mapping: {port} -> 8008")
-            self.logger.debug(f"    LAN: {network_name}")
+            #self.logger.debug(f"    Port mapping: {port} -> 8008")
+            self.logger.debug(f"    Network: {network_name}")
             self.logger.debug(f"    Data directory: {node_data_dir}")
             
             try:
@@ -207,25 +254,22 @@ class ssb_network_simulator:
                     name=node_name,
                     hostname=node_name,
                     detach=True,
-                    ports={
-                        '8008/tcp': port
-                    },
+                    #ports={
+                    #    '8008/tcp': port
+                    #},
                     volumes={
-                        str(node_data_dir.absolute()): {'bind': '/root/.ssb', 'mode': 'rw'},
-                        str(self.discovery_dir.absolute()): {'bind': '/discovery', 'mode': 'rw'}
+                        str(node_data_dir.absolute()): {'bind': '/root/.ssb', 'mode': 'rw'}
+                        #,
+                        #str(self.discovery_dir.absolute()): {'bind': '/discovery', 'mode': 'rw'}
                     },
                     network=network_name,
                     remove=False
                 )
-
-                #sprint 3: adding this part so they connect to the internet network
-                self.internet_network.connect(container)
-                self.logger.debug(f"    Connected to internt network")
                 
                 node_info = {
                     'name': node_name,
                     'container': container,
-                    'port': port,
+                    #'port': port,
                     'lan': lan_index,
                     'lan_name': network_name,
                     'id': i + 1,
@@ -245,6 +289,32 @@ class ssb_network_simulator:
         nodes_duration = time.time() - nodes_start
         self.logger.info(f"Created {len(self.nodes)} nodes ({nodes_duration:.2f}s)")
         self.logger.debug("-"*80)
+
+        #############################################################################################
+        ## configure nodes x
+
+        def configure_node_gateways(self):
+            self.logger.info("Configuring gateway route on nodes...")
+
+            for node in self.nodes:
+                lan_name = node['lan_name']
+                router_ip = self.router_ips[lan_name]
+
+                # adding all other LANs to this container's routing table
+                for net_info in self.networks:
+                    if net_info['name'] == lan_name:
+                        continue
+
+                    subnet = net_info['subnet']
+
+                    cmd = f"ip route add {subnet} via {router_ip}"
+                    #the following might not work due to needing to be NET_ADMIN 
+                    result = node['container'].exec_run(cmd, privileged=True)
+
+                    if result.exit_code != 0:
+                        self.logger.warning( f" ROute failed on {node['name']} : {cmd}")
+                    else:
+                        self.logger.debug(f"    {node['name']}: route to {subnet} via {router_ip}")
 
     def wait_for_nodes_ready(self, timeout: int = 60):
         self.logger.info(f"Waiting for nodes to be ready (timeout: {timeout}s)...")
@@ -324,21 +394,16 @@ class ssb_network_simulator:
             
             # Extract key without @ and .ed25519
             key = node_id.replace('@', '').replace('.ed25519', '')
+
+            #getting ip address of node
+            lan_name = node['lan_name']
+            network_data = node['container'].attrs['NetworkSettings']['Networks'][lan_name]
+            LAN_address = network_data['Gateway']
+            IP_address = network_data['IPAddress']
+            print(f"LAN address is {LAN_address} and IP address is {IP_address}")
             
-          #  address = f"net:{node['name']}:8008~shs:{key}"
-          ############################################
             address = f"net:{self.host_ip}:{node['port']}~shs:{key}"
-
-            # using docker container to get lan ip
-            container = node['container']
-            container.reload()
-            networks = container.attrs['NetworkSettings']['Networks']
-            internal_ip = networks[node['lan_name']]['IPAddress']
-
-            lan_address = f"net:{internal_ip}:8008~shs:{key}"
-            wan_address = address
-
-            ##################################################
+            lan_gossip_address = f"net:{IP_address}:8000~shs:{key}"
             
             info = {
                 'name': node['name'],
@@ -347,13 +412,12 @@ class ssb_network_simulator:
                 'host': self.host_ip,
                 'port': node['port'],
                 'address': address,
-                'lan_address' : lan_address,
-                'wan_address' : wan_address
+                'ip_address' : IP_address,
+                'lan_gossip_address': lan_gossip_address,
+                'lan_name' : lan_name
             }
             
             self.logger.debug(f"  Address: {address}")
-            self.logger.debug(f"  WAN address: {wan_address}")
-            self.logger.debug(f"  LAN address: {lan_address}")
             return info
             
         except Exception as e:
@@ -381,8 +445,7 @@ class ssb_network_simulator:
         
         info_duration = time.time() - info_start
         self.logger.info(f"    Gathered info for {len(node_infos)} nodes ({info_duration:.2f}s)")
-        #writing to discovery file
-        self.write_all_discovery_files()
+        
         # Establish connections
         self.logger.info("  Creating peer connections...")
         connections_made = 0
@@ -450,24 +513,16 @@ class ssb_network_simulator:
     
     def gossip_and_follow(self, node_a: Dict, node_b: Dict) -> bool:
         self.logger.debug(f"    Connecting {node_a['name']} -> {node_b['name']}...")
-        same_lan = node_a['lan'] == node_b['lan']
-
-        if same_lan:
-            target_address = node_b['info']['lan_address']
-            gossip_cmd = f'ssb-server gossip.connect "{target_address}"'
-            self.logger.debug(f"    Same LAN - dialling directly: {target_address}")
-        else:
-            discovery_file = f"/discovery/{node_b['name']}.json"
-            gossip_cmd = (
-                f'sh -c \'addr=$(jq -r \'.address\' {discovery_file}) && '
-                f'ssb-server gossip.connect "$addr"\''
-            )
-
+        
         try:
+            #if they're in the same LAN, try somehting new and fun (use local address)
+            #if node_a["lan_name"] == node_b["lan_name"]:
+                #gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["lan_gossip_address"]}"'
             # Gossip connect
-            #gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
-            self.logger.debug(f"      Gossip command: {gossip_cmd}")
-            
+            #else:
+                #gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
+            #self.logger.debug(f"      Gossip command: {gossip_cmd}")
+            gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["lan_gossip_address"]}"'
             result = node_a['container'].exec_run(gossip_cmd, stderr=True)
             
             if result.exit_code != 0:
@@ -513,33 +568,6 @@ class ssb_network_simulator:
                 logs = container.logs(tail=50).decode('utf-8', errors='replace')
                 self.logger.error(f"  Last 50 log lines:\n{logs}")
 
-    def write_discovery_advertisement(self, node:Dict):
-        # for now: to emulate the concept of real life people sharing ids and addresses
-        # how i'm doing it: a shared folder on local machine that all of them can read and write
-        #use: write_discovery_advertisement(node dictionary)
-        info = node['info']
-        advertisement = {
-            'name': node['name'],
-            'id': info['id'],
-            'address': info['wan_address']
-        }
-
-        discovery_file = self.discovery_dir / f"{node['name']}.json"
-
-        with open(discovery_file, 'w') as f:
-            json.dump(advertisement, f, indent=2)
-
-        self.logger.debug(f"    Written discovery file: {discovery_file}")
-
-    def write_all_discovery_files(self):
-        self.logger.info("Writing discovery advertisements...")
-
-        for node in self.nodes:
-            if 'info' in node:
-                self.write_discovery_advertisement(node)
-
-        self.logger.info(f" Written {len(self.nodes)} advertisement files")
-        
     def run(self):
         overall_start = time.time()
         
@@ -552,7 +580,10 @@ class ssb_network_simulator:
         try:
             self.cleanup_existing()
             self.create_networks()
+            self.create_router()
+            self.get_router_ips()
             self.create_nodes()
+            self.configure_node_gateways()
             self.debug_container_status()
             
             if not self.wait_for_nodes_ready():
