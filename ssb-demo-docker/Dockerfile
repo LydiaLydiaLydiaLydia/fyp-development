@@ -19,8 +19,13 @@ RUN chmod +x /usr/local/bin/*
 COPY scripts/register_node.sh /app/
 RUN chmod +x /app/register_node.sh
 
+WORKDIR /usr/local/lib/node_modules/ssb-server
+RUN npm install sodium-native
+
+WORKDIR /app
+
 VOLUME /data
 
 EXPOSE 8008
 
-CMD ["ssb-server", "start", "--host", "0.0.0.0"]
+CMD ["ssb-server", "start"]

@@ -290,10 +290,44 @@ class ssb_network_simulator:
         self.logger.info(f"Created {len(self.nodes)} nodes ({nodes_duration:.2f}s)")
         self.logger.debug("-"*80)
 
-        #############################################################################################
-        ## configure nodes x
+    def configure_nodes(self):
+        self.logger.info("Writing SSB config to nodes...")
 
-        def configure_node_gateways(self):
+        for node in self.nodes:
+            node['container'].reload()
+            net_data = node['container'].attrs['NetworkSettings']['Networks'][node['lan_name']]
+            container_ip = net_data['IPAddress']
+            gateway_ip = net_data['Gateway']
+
+            # Store IPs on node dict for later use
+            node['lan_ip'] = container_ip
+            node['gateway_ip'] = gateway_ip
+
+            config = {
+                "host": container_ip,
+                "port": 8008,
+                "allowPrivate": True,
+                "caps": {
+                    "shs": "1KHLiKZvAvjbY1ziZEHMXawbCEIM6qwjCDm3VYRan/s="
+                }
+            }
+
+            config_json = json.dumps(config, indent=2)
+
+            # Write config before SSB process reads it
+            # Using printf rather than echo to avoid shell escaping issues with JSON
+            result = node['container'].exec_run(
+                f"sh -c 'mkdir -p /root/.ssb && printf \"%s\" {repr(config_json)} > /root/.ssb/config'"
+            )
+
+            if result.exit_code != 0:
+                self.logger.error(f"  Failed to write config to {node['name']}: {result.output.decode()}")
+            else:
+                self.logger.info(f"  {node['name']}: config written ({container_ip})")
+
+        self.logger.info("Node config complete")
+
+    def configure_node_gateways(self):
             self.logger.info("Configuring gateway route on nodes...")
 
             for node in self.nodes:
@@ -396,27 +430,34 @@ class ssb_network_simulator:
             key = node_id.replace('@', '').replace('.ed25519', '')
 
             #getting ip address of node
-            lan_name = node['lan_name']
-            network_data = node['container'].attrs['NetworkSettings']['Networks'][lan_name]
-            LAN_address = network_data['Gateway']
-            IP_address = network_data['IPAddress']
-            print(f"LAN address is {LAN_address} and IP address is {IP_address}")
+            lan_ip = node.get('lan_ip')
+            if not lan_ip:
+                node['container'].reload()
+                net_data = node['container'].attrs['NetworkSettings']['Networks'][node['lan_name']]
+                lan_ip = net_data['IPAddress']
+
+            #lan_name = node['lan_name']
+            #network_data = node['container'].attrs['NetworkSettings']['Networks'][lan_name]
+            #LAN_address = network_data['Gateway']
+            #IP_address = network_data['IPAddress']
+            #print(f"LAN address is {LAN_address} and IP address is {IP_address}")
             
-            address = f"net:{self.host_ip}:{node['port']}~shs:{key}"
-            lan_gossip_address = f"net:{IP_address}:8000~shs:{key}"
+            address = f"net:{lan_ip}:8008~shs:{key}"
+            #lan_gossip_address = f"net:{IP_address}:8000~shs:{key}"
             
             info = {
                 'name': node['name'],
                 'id': node_id,
                 'key': key,
-                'host': self.host_ip,
-                'port': node['port'],
-                'address': address,
-                'ip_address' : IP_address,
-                'lan_gossip_address': lan_gossip_address,
-                'lan_name' : lan_name
+                'host': lan_ip,
+                'port': 8008,
+                'address': address#,
+                #'ip_address' : IP_address,
+                #'lan_gossip_address': lan_gossip_address,
+                #'lan_name' : lan_name
             }
             
+            node['info'] = info
             self.logger.debug(f"  Address: {address}")
             return info
             
@@ -437,14 +478,14 @@ class ssb_network_simulator:
         for node in self.nodes:
             try:
                 info = self.get_node_info(node)
-                node_infos.append(info)
-                node['info'] = info
+                #node_infos.append(info)
+                #node['info'] = info
                 self.logger.debug(f"  Got info for {node['name']}")
             except Exception as e:
                 self.logger.error(f"  Failed to get info for {node['name']}: {e}")
         
         info_duration = time.time() - info_start
-        self.logger.info(f"    Gathered info for {len(node_infos)} nodes ({info_duration:.2f}s)")
+        #self.logger.info(f"    Gathered info for {len(node_infos)} nodes ({info_duration:.2f}s)")
         
         # Establish connections
         self.logger.info("  Creating peer connections...")
@@ -472,8 +513,8 @@ class ssb_network_simulator:
             self.logger.debug(f"    Mode: {self.friends_mode}, Count: {num_friends}")
             
             # Select random friends (excluding self)
-            available_friends = [j for j in range(len(node_infos)) if j != i]
-            friend_indices = random.sample(available_friends, num_friends)
+            available_friends = [j for j in range(len(self.nodes)) if j != i and 'info' in self.nodes[j]]
+            friend_indices = random.sample(available_friends, min(num_friends, len(available_friends)))
             
             node_connections = []
             for friend_idx in friend_indices:
@@ -516,21 +557,24 @@ class ssb_network_simulator:
         
         try:
             #if they're in the same LAN, try somehting new and fun (use local address)
-            #if node_a["lan_name"] == node_b["lan_name"]:
+            if node_a["lan_name"] != node_b["lan_name"]:
+                gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
+                result = node_a['container'].exec_run(gossip_cmd, stderr=True)
+
+                if result.exit_code != 0:
+                    self.logger.warning(f"         Gossip failed (exit {result.exit_code})")
+                    self.logger.debug(f"      Output: {result.output.decode()[:200]}")
+                    return False
+            
+                self.logger.debug(f"        Gossip successful")
                 #gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["lan_gossip_address"]}"'
             # Gossip connect
             #else:
                 #gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
             #self.logger.debug(f"      Gossip command: {gossip_cmd}")
-            gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["lan_gossip_address"]}"'
-            result = node_a['container'].exec_run(gossip_cmd, stderr=True)
             
-            if result.exit_code != 0:
-                self.logger.warning(f"         Gossip failed (exit {result.exit_code})")
-                self.logger.debug(f"      Output: {result.output.decode()[:200]}")
-                return False
             
-            self.logger.debug(f"        Gossip successful")
+            
             
             # Follow
             follow_cmd = f'ssb-server publish --type contact --contact "{node_b["info"]["id"]}" --following'
@@ -558,11 +602,11 @@ class ssb_network_simulator:
         for node in self.nodes:
             container = node['container']
             container.reload()  # Refresh container state
+            status = container.status
+            self.logger.debug(f"{node['name']} status: {status}")
             
-            self.logger.debug(f"{node['name']} status: {container.status}")
-            
-            if container.status != 'running':
-                self.logger.error(f"  {node['name']} is {container.status}!")
+            if status != 'running':
+                self.logger.error(f"  {node['name']} is {status}!")
                 
                 # Get logs
                 logs = container.logs(tail=50).decode('utf-8', errors='replace')
@@ -583,6 +627,7 @@ class ssb_network_simulator:
             self.create_router()
             self.get_router_ips()
             self.create_nodes()
+            self.configure_nodes()
             self.configure_node_gateways()
             self.debug_container_status()
             
@@ -693,8 +738,8 @@ def main():
         friends_mode=args.friends_mode,
         friends_range=(args.friends_min, args.friends_max),
         friends_fixed=args.friends_fixed,
-        base_port=args.base_port,
-        host_ip=args.host_ip,
+        #base_port=args.base_port,
+        #host_ip=args.host_ip,
         log_file=args.log_file
     )
     
