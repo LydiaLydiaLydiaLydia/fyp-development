@@ -1,7 +1,7 @@
 class propagation_demo:
     def __init__(self, ssb_simulator):
-        simulator = ssb_simulator
-        connection_graph = self.get_connection_graph
+        self.simulator = ssb_simulator
+        self.connection_graph = self.get_connection_graph
         print("okay")
 
     def get_connection_graph(simulator):

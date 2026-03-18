@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Tuple
 from datetime import datetime
+from propagation_demo import propagation_demo
 
 class ssb_network_simulator:
     def __init__ (self, num_nodes: int = 10, friends_mode: str = 'range',
@@ -730,6 +731,12 @@ def main():
         action='store_true',
         help='Only cleanup existing containers and networks, then exit'
     )
+
+    parser.add_argument(
+        '--prop-demo',
+        action='store_true',
+        help='Run post propagation demonstration'
+    )
     
     args = parser.parse_args()
     
@@ -749,6 +756,12 @@ def main():
         print("Cleanup complete")
     else:
         simulator.run()
+        if args.prop_demo:
+            print("Propagation demonstration underway...")
+            prop_demo = propagation_demo(simulator)
+            direct, indirect = prop_demo.classify_nodes(simulator.nodes[0], prop_demo.connection_graph)
+            print("Direct connections to node 1 are: ",  direct)
+            print("Indirect connections to node1 are: ",  indirect)
 
 if __name__ == '__main__':
     main()
