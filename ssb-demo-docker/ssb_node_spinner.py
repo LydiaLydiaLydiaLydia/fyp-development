@@ -28,6 +28,7 @@ class ssb_network_simulator:
         self.networks = []
         self.router = None
         self.router_ips = {}
+        self.connection_details = []
 
         self.data_dir = Path('./data')
         #self.discovery_dir = Path('./discovery')
@@ -546,7 +547,7 @@ class ssb_network_simulator:
             self.logger.debug(f"  {detail['node']}: {detail['count']} connections -> {detail['connections']}")
         
         self.logger.debug("-"*80)
-        
+        self.connection_details = connection_details
         return {
             'successful': connections_made,
             'failed': connections_failed,
@@ -759,9 +760,21 @@ def main():
         if args.prop_demo:
             print("Propagation demonstration underway...")
             prop_demo = propagation_demo(simulator)
-            direct, indirect = prop_demo.classify_nodes(simulator.nodes[0], prop_demo.connection_graph)
-            print("Direct connections to node 1 are: ",  direct)
-            print("Indirect connections to node1 are: ",  indirect)
+            stats = prop_demo.run_baseline('ssb-sim-node-1')
+            prop_demo.print_result(stats)
+            prop_demo.log_result(stats)
+            author_drop_stats = prop_demo.run_author_dropout('ssb-sim-node-1')
+            prop_demo.print_result(author_drop_stats)
+            prop_demo.log_result(author_drop_stats)
+            local_drop_stats = prop_demo.run_replicator_dropout('ssb-sim-node-1')
+            prop_demo.print_result(local_drop_stats)
+            prop_demo.log_result(local_drop_stats)
+            catch_up_stats1, catch_up_stats2 = prop_demo.run_dropout_catchup('ssb-sim-node-1')
+            prop_demo.print_result(catch_up_stats1)
+            prop_demo.log_result(catch_up_stats1)
+            prop_demo.print_result(catch_up_stats2)
+            prop_demo.log_result(catch_up_stats2)
+
 
 if __name__ == '__main__':
     main()
