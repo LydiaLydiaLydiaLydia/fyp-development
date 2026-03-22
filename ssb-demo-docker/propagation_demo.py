@@ -178,11 +178,11 @@ class propagation_demo:
             print("Failed to publish, exiting")
             return None
         #print(f"Result from post is: {result}")
-        propagation = self.poll_propogation(nodes_to_drop - direct, msg_id, posted_at, 2)
+        propagation = self.poll_propogation(direct - nodes_to_drop, msg_id, posted_at, 2)
         propagation2 = {}
-        restart_time_1 = time.time() * 1000
+        restart_time_1 = time.time()
         for node in nodes_to_drop:
-            self.nodes[node]['container'].start()
+            self.restart_node(node)
             restart_time = time.time() * 1000
             propagation2.update(self.poll_propogation([node], msg_id, restart_time, 2))
             
