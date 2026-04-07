@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Tuple
 from datetime import datetime
-from propagation_demo import propagation_demo
+from propagation_demo import propagation_demo, scenario_result
 
 class ssb_network_simulator:
     def __init__ (self, num_nodes: int = 10, friends_mode: str = 'range',
@@ -761,19 +761,17 @@ def main():
             print("Propagation demonstration underway...")
             prop_demo = propagation_demo(simulator)
             stats = prop_demo.run_baseline('ssb-sim-node-1')
-            prop_demo.print_result(stats)
-            prop_demo.log_result(stats)
+       
             author_drop_stats = prop_demo.run_author_dropout('ssb-sim-node-1')
-            prop_demo.print_result(author_drop_stats)
-            prop_demo.log_result(author_drop_stats)
-            local_drop_stats = prop_demo.run_replicator_dropout('ssb-sim-node-1')
-            prop_demo.print_result(local_drop_stats)
-            prop_demo.log_result(local_drop_stats)
+            
+            local_drop_stats, local_drop_catchup_stats = prop_demo.run_lan_dropout('ssb-sim-node-1')
+
             catch_up_stats1, catch_up_stats2 = prop_demo.run_dropout_catchup('ssb-sim-node-1')
-            prop_demo.print_result(catch_up_stats1)
-            prop_demo.log_result(catch_up_stats1)
-            prop_demo.print_result(catch_up_stats2)
-            prop_demo.log_result(catch_up_stats2)
+
+
+            #migration_stats = prop_demo.run_lan_migration('ssb-sim-node-1')
+            #prop_demo.print_result(migration_stats)
+            #prop_demo.log_result(migration_stats)
 
 
 if __name__ == '__main__':
