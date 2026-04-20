@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import docker
 import json
 import random
@@ -353,6 +355,15 @@ class ssb_network_simulator:
                     else:
                         self.logger.debug(f"    {node['name']}: route to {subnet} via {router_ip}")
 
+    #new function to be used by thread executor in wait_for_nodes_ready
+    def _check_node_ready(self, node:Dict):
+        try:
+            result = node['container'].exec_run("ssb-server whoami", stderr=False)
+
+            return node['name'], result.exit_code == 0
+        except Exception:
+            return node['name'], False
+    
     def wait_for_nodes_ready(self, timeout: int = 60):
         self.logger.info(f"Waiting for nodes to be ready (timeout: {timeout}s)...")
         wait_start = time.time()
@@ -370,27 +381,29 @@ class ssb_network_simulator:
                 self.logger.debug(f"Not ready: {set(n['name'] for n in self.nodes) - ready_nodes}")
                 break
             
+            #Changing this part to use THREADING
+
+            pending = []
             for node in self.nodes:
-                if node['name'] in ready_nodes:
-                    continue
+                if node['name'] not in ready_nodes:
+                    pending.append(node)
+
+            #initialising a threadpoolexecutor instance
+            #the max workers are the maximum amount of threads to use
+            # this picks whichever is smaller: 20 or the amount of pending nodes
+            with ThreadPoolExecutor(max_workers=min(len(pending), 20)) as executor:
+
+                #futures are threads to be completed?
+                #for each node in the pending list,
+                # the executor is creating a thread and this dictionary is made out of
+                # the results of these threads running the _check_node_ready function?
+                futures = {executor.submit(self._check_node_ready, node): node for node in pending}
+                for future in as_completed(futures):
+                    name, is_ready = future.result()
+                    if is_ready:
+                        ready_nodes.add(name)
+                        self.logger.info(f"{name} is ready ({len(ready_nodes)}/{self.num_nodes})")
                 
-                try:
-                    self.logger.debug(f"Checking if {node['name']} is ready...")
-                    
-                    result = node['container'].exec_run(
-                        "ssb-server whoami",
-                        stderr=False
-                    )
-                    
-                    if result.exit_code == 0:
-                        ready_nodes.add(node['name'])
-                        self.logger.info(f"    {node['name']} is ready ({len(ready_nodes)}/{self.num_nodes})")
-                        self.logger.debug(f"    Response: {result.output.decode().strip()[:100]}...")
-                    else:
-                        self.logger.debug(f"    Not ready yet (exit code: {result.exit_code})")
-                        
-                except Exception as e:
-                    self.logger.debug(f"    Error checking {node['name']}: {e}")
             
             if len(ready_nodes) < self.num_nodes:
                 # Log progress every 10 seconds
