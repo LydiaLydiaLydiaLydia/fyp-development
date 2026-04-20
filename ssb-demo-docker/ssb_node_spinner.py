@@ -13,13 +13,15 @@ class ssb_network_simulator:
     def __init__ (self, num_nodes: int = 10, friends_mode: str = 'range',
                   friends_range: Tuple[int, int] = (2, 5), friends_fixed: int = 3, 
                   base_port: int = 8000, host_ip: str = '192.168.56.1',
-                  log_file: str = None):
+                  log_file: str = None, seed: int = None):
         self.num_nodes = num_nodes
         self.friends_mode = friends_mode # either 'random', 'range', 'fixed'
         self.friends_range = friends_range
         self.friends_fixed = friends_fixed
-        #self.base_port = base_port
-        #self.host_ip = host_ip
+
+        #Adding a seed for reproducability! Can be added through cmd call
+        self.seed = seed if seed is not None else random.randint(0, 99999)
+        random.seed(self.seed)
 
         self.client = docker.from_env()
         self.project_name = "ssb-sim"
@@ -56,8 +58,7 @@ class ssb_network_simulator:
             self.logger.info(f"  - Friends range: {self.friends_range[0]}-{self.friends_range[1]}")
         elif self.friends_mode == 'fixed':
             self.logger.info(f"  - Friends fixed: {self.friends_fixed}")
-        #self.logger.info(f"  - Base port: {self.base_port}")
-        #self.logger.info(f"  - Host IP: {self.host_ip}")
+        self.logger.info(f"  - Random seed: {self.seed}")
         self.logger.info(f"  - Log file: {self.log_file}")
         self.logger.info("="*80)
 
@@ -737,6 +738,13 @@ def main():
         '--prop-demo',
         action='store_true',
         help='Run post propagation demonstration'
+    )
+
+    parser.add_argument(
+        '--seed',
+        type = int,
+        default = None,
+        help = "Random seed for reproducibility (default: auto-generated, see logs for value)"
     )
     
     args = parser.parse_args()
