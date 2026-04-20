@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import docker
 import json
@@ -333,27 +333,27 @@ class ssb_network_simulator:
         self.logger.info("Node config complete")
 
     def configure_node_gateways(self):
-            self.logger.info("Configuring gateway route on nodes...")
+        self.logger.info("Configuring gateway route on nodes...")
 
-            for node in self.nodes:
-                lan_name = node['lan_name']
-                router_ip = self.router_ips[lan_name]
+        for node in self.nodes:
+            lan_name = node['lan_name']
+            router_ip = self.router_ips[lan_name]
 
-                # adding all other LANs to this container's routing table
-                for net_info in self.networks:
-                    if net_info['name'] == lan_name:
-                        continue
+            # adding all other LANs to this container's routing table
+            for net_info in self.networks:
+                if net_info['name'] == lan_name:
+                    continue
 
-                    subnet = net_info['subnet']
+                subnet = net_info['subnet']
 
-                    cmd = f"ip route add {subnet} via {router_ip}"
-                    #the following might not work due to needing to be NET_ADMIN 
-                    result = node['container'].exec_run(cmd, privileged=True)
+                cmd = f"ip route add {subnet} via {router_ip}"
+                #the following might not work due to needing to be NET_ADMIN 
+                result = node['container'].exec_run(cmd, privileged=True)
 
-                    if result.exit_code != 0:
-                        self.logger.warning( f" ROute failed on {node['name']} : {cmd}")
-                    else:
-                        self.logger.debug(f"    {node['name']}: route to {subnet} via {router_ip}")
+                if result.exit_code != 0:
+                    self.logger.warning( f" ROute failed on {node['name']} : {cmd}")
+                else:
+                    self.logger.debug(f"    {node['name']}: route to {subnet} via {router_ip}")
 
     #new function to be used by thread executor in wait_for_nodes_ready
     def _check_node_ready(self, node:Dict):
