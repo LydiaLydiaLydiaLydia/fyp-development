@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import shutil
 
 import docker
 import json
@@ -129,6 +130,17 @@ class ssb_network_simulator:
                     networks_removed += 1
                 except Exception as e:
                     self.logger.warning(f"    Could not remove network {network.name}: {e}")
+
+        # Clear node data directories so SSB starts fresh each run.
+        # Without this, stale keypairs and peer tables from previous runs
+        # cause Secret Handshake failures when nodes try to reconnect
+        # using outdated public keys.
+        if self.data_dir.exists():
+            self.logger.info("Clearing node data directories...")
+            for node_dir in self.data_dir.iterdir():
+                if node_dir.is_dir() and node_dir.name.startswith('node-'):
+                    shutil.rmtree(node_dir)
+                    self.logger.debug(f"  Cleared {node_dir}")
         
 
         cleanup_duration = time.time() - cleanup_start
