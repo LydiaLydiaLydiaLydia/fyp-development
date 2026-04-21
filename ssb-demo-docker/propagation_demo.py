@@ -363,6 +363,16 @@ class propagation_demo:
                 same_lan_direct.append(node)
                 direct_copy.remove(node)
 
+        #added safeguard for nonsense
+        if not direct_copy and not same_lan_direct:
+            self.simulator.logger.warning(
+                f"run_lan_dropout: node-1 has no cross-LAN or same-LAN direct connections "
+                f"— skipping scenario as it would produce no meaningful data"
+            )
+            return None, None
+
+        print(f"Direct connections to {node_name} not in {node_lan}: {direct_copy}")
+
         print(f"Direct connections to {node_name} not in {node_lan}: {direct_copy}")
         print(f"Nodes in same LAN as author: {same_lan_nodes}")
         print(f"External nodes: {direct_copy}")
@@ -420,7 +430,8 @@ class propagation_demo:
             self.restart_node(node, bootstrap_peers, feeds_to_request=[author_id])
 
         restarted_at = time.time() * 1000
-        same_lan_propagation = self._poll_propagation(same_lan_direct, msg_id, restarted_at, 5)
+        nodes_to_catchup = same_lan_nodes - {node_name}
+        same_lan_propagation = self._poll_propagation(nodes_to_catchup, msg_id, restarted_at, 5)
 
         non_lan_result = self._make_result(
             'same_lan_dropout', msg_id, posted_at, same_lan_nodes, non_lan_propagation
