@@ -7,7 +7,8 @@ import time
 import json
 import matplotlib.pyplot as plt
 
-
+#each scenario run will have a set of results in the same form and will need to be logged and plotted
+#so I've made a class for it
 class scenario_result:
 
     def __init__(self, name, message_id, posted_at, nodes_down, propagation_results, logs_dir, logger):
@@ -25,7 +26,6 @@ class scenario_result:
         self.propagation_rate = self._get_prop_rate()
 
     def report(self):
-        """Explicitly trigger logging, printing, and plotting for this result."""
         self._log_result()
         self._print_result()
         self._plot_scenario()
@@ -33,8 +33,8 @@ class scenario_result:
     def _get_successes(self):
         return sum(1 for val in self.propagation_results.values() if val['received'])
 
+    #public accessor
     def get_successes(self):
-        """Public accessor used by scenario logic to check propagation state."""
         return self._get_successes()
 
     def _get_elapsed_list(self):
@@ -54,6 +54,8 @@ class scenario_result:
             return 0
         return self.successes / len(self.propagation_results)
 
+
+    #for displaying the timestamps in a human readable way!
     def _for_humans(self, mili_value):
         seconds, miliseconds = divmod(mili_value, 1000)
         minutes, secs = divmod(seconds, 60)
@@ -180,8 +182,9 @@ class propagation_demo:
             lan_graph[lan_name].add(node['name'])
         return lan_graph
 
+    #creating a scenario_result
     def _make_result(self, name, msg_id, posted_at, nodes_down, propagation):
-        """Helper to construct a scenario_result with the shared logs_dir."""
+        
         result = scenario_result(
             name, msg_id, posted_at, nodes_down, propagation,
             self.simulator.logs_dir, self.simulator.logger
@@ -190,11 +193,7 @@ class propagation_demo:
         return result
 
     def classify_nodes(self, author_name: str, graph: dict):
-        """
-        Return (direct, indirect) sets relative to author_name.
-        Direct includes both outbound follows and nodes that follow author back,
-        since SSB gossip is symmetric — replication occurs regardless of follow direction.
-        """
+
         direct = {
             peer for peer in graph[author_name]
         } | {
@@ -210,14 +209,7 @@ class propagation_demo:
         return direct, indirect
 
     def _poll_propagation(self, node_set, message_id, time_posted, timeout_in_mins):
-        """
-        Poll a set of nodes in parallel until all have received message_id
-        or the timeout expires.
 
-        Parallelising polls matters for result accuracy: sequential polling
-        introduces artificial latency into elapsed timestamps for nodes polled
-        later in the list.
-        """
         timeout = time.time() + timeout_in_mins * 60
         propagation = {
             node_name: {

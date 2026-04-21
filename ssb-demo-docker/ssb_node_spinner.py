@@ -23,8 +23,10 @@ class ssb_network_simulator:
         self.friends_fixed = friends_fixed
 
         #Adding a seed for reproducability! Can be added through cmd call
-        self.seed = seed if seed is not None else random.randint(0, 99999)
-        random.seed(self.seed)
+        self.seed = seed 
+        if seed is None:
+            random.randint(0, 99999)
+            random.seed(self.seed)
 
         self.client = docker.from_env()
         self.project_name = "ssb-sim"
