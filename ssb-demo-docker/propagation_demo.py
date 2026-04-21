@@ -262,7 +262,7 @@ class propagation_demo:
         direct, _ = self.classify_nodes(node_name, self.connection_graph)
         return [node for node in direct if node not in nodes_down]
 
-    def restart_node(self, node_name, bootstrap_peers=None):
+    def restart_node(self, node_name, bootstrap_peers=None, feeds_to_request=None):
         self.nodes[node_name]['container'].start()
         self.simulator.logger.info(f"Restarted {node_name}, waiting for SSB to be ready...")
 
@@ -286,11 +286,25 @@ class propagation_demo:
                         f'ssb-server gossip.reconnect "{peer_addr}"'
                     )
                     ready = peer_reconnect_attempt.exit_code
-                    self.simulator.logger.debug(f"Result: {peer_reconnect_attempt.output.decode()}")
                     if ready == 0:
                         break
                     time.sleep(2)
                 self.simulator.logger.info(f"{node_name} successfully contacted {peer}")
+
+        # Explicitly request replication of specific feeds rather than waiting
+        # for SSB's gossip scheduler to decide to sync them. Without this,
+        # ssb-replicate only syncs the connecting peer's own feed on reconnect
+        # and then waits passively, meaning the author's feed may never arrive
+        # within the polling window.
+        if feeds_to_request:
+            for feed_id in feeds_to_request:
+                result = self.nodes[node_name]['container'].exec_run(
+                    f'ssb-server replicate.request --id "{feed_id}" --replicate true'
+                )
+                self.simulator.logger.info(
+                    f"{node_name}: requested replication of {feed_id[:20]}... "
+                    f"(exit {result.exit_code})"
+                )
 
     # ------------------------------------------------------------------ #
     #  Scenarios
@@ -330,7 +344,11 @@ class propagation_demo:
         result = self._make_result('author_dropout', msg_id, posted_at, [node_name], propagation)
 
         bootstrap_peers = self._get_bootstrap_peers(node_name, [node_name])
-        self.restart_node(node_name, bootstrap_peers)
+        peer_ids = [
+            self.nodes[peer]['info']['id']
+            for peer in bootstrap_peers
+        ]
+        self.restart_node(node_name, bootstrap_peers, feeds_to_request=peer_ids)
         return result
 
     def run_lan_dropout(self, node_name):
@@ -396,9 +414,10 @@ class propagation_demo:
         non_lan_propagation = self._poll_propagation(direct_copy, msg_id, posted_at, 5)
 
         # Restart LAN nodes and measure catch-up
+        author_id = self.nodes[node_name]['info']['id']
         for node in same_lan_nodes:
             bootstrap_peers = self._get_bootstrap_peers(node_name, same_lan_nodes)
-            self.restart_node(node, bootstrap_peers)
+            self.restart_node(node, bootstrap_peers, feeds_to_request=[author_id])
 
         restarted_at = time.time() * 1000
         same_lan_propagation = self._poll_propagation(same_lan_direct, msg_id, restarted_at, 5)
@@ -474,10 +493,12 @@ class propagation_demo:
                 )
 
         # Restart dropped nodes and measure catch-up
+        author_id = self.nodes[node_name]['info']['id']
         restart_time = time.time() * 1000
+        
         for node in nodes_to_drop:
             bootstrap_peers = self._get_bootstrap_peers(node_name, nodes_to_drop)
-            self.restart_node(node, bootstrap_peers)
+            self.restart_node(node, bootstrap_peers, feeds_to_request=[author_id])
 
         dropout_propagation = self._poll_propagation(nodes_to_drop, msg_id, restart_time, 5)
 
