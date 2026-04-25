@@ -24,7 +24,7 @@ class ssb_network_simulator:
         #Adding a seed for reproducability! Can be added through cmd call
         self.seed = seed 
         if seed is None:
-            random.randint(0, 99999)
+            self.seed = random.randint(0, 99999)
 
         random.seed(self.seed)
 
