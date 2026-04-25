@@ -25,7 +25,8 @@ class ssb_network_simulator:
         self.seed = seed 
         if seed is None:
             random.randint(0, 99999)
-            random.seed(self.seed)
+
+        random.seed(self.seed)
 
         self.client = docker.from_env()
         self.project_name = "ssb-sim"
@@ -780,6 +781,8 @@ def main():
             local_drop_stats, local_drop_catchup_stats = prop_demo.run_lan_dropout('ssb-sim-node-1')
 
             catch_up_stats1, catch_up_stats2 = prop_demo.run_dropout_catchup('ssb-sim-node-1')
+
+            prop_demo.run_lan_migration('ssb-sim-node-1')
 
 
             #migration_stats = prop_demo.run_lan_migration('ssb-sim-node-1')
