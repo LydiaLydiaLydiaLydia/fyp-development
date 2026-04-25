@@ -260,7 +260,9 @@ class propagation_demo:
 
     def _get_bootstrap_peers(self, node_name, nodes_down):
         direct, _ = self.classify_nodes(node_name, self.connection_graph)
-        return [node for node in direct if node not in nodes_down]
+        b_peers = [node for node in direct if node not in nodes_down]
+        b_peers.append(node_name)
+        return 
 
     def restart_node(self, node_name, bootstrap_peers=None):
         self.nodes[node_name]['container'].start()
@@ -413,11 +415,16 @@ class propagation_demo:
 
         # If no cross-LAN nodes received it, attempt a manual reconnect and retry
         # with a bounded retry limit to avoid infinite looping
+        author_id = self.nodes[node_name]['info']['id']
+
         if non_lan_result.get_successes() == 0:
             for node in direct_copy:
                 self.nodes[node]['container'].exec_run(
                     f'ssb-server gossip.reconnect "{self.nodes[node_name]["info"]["address"]}"'
                 )
+                self.nodes[node]['container'].exec_run(
+                    f'ssb-server replicate.request "{author_id}"'
+                ) 
 
             max_retries = 5
             for attempt in range(max_retries):
@@ -467,11 +474,18 @@ class propagation_demo:
             for node in propagation
             if self.nodes[node]['lan_name'] != self.nodes[node_name]['lan_name']
         ]
+        author_id = self.nodes[node_name]['info']['id']
+
         if True not in non_lan_online_results:
             for node in propagation:
                 self.nodes[node]['container'].exec_run(
                     f'ssb-server gossip.reconnect "{self.nodes[node_name]["info"]["address"]}"'
                 )
+                self.nodes[node]['container'].exec_run(
+                    f'ssb-server replicate.request "{author_id}"'
+                )
+
+
 
         # Restart dropped nodes and measure catch-up
         restart_time = time.time() * 1000
@@ -491,6 +505,9 @@ class propagation_demo:
             for node in dropout_propagation:
                 self.nodes[node]['container'].exec_run(
                     f'ssb-server gossip.reconnect "{self.nodes[node_name]["info"]["address"]}"'
+                )
+                self.nodes[node]['container'].exec_run(
+                    f'ssb-server replicate.request "{author_id}"'
                 )
 
         return (
