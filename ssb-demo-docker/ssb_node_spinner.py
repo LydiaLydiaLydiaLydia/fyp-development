@@ -13,8 +13,7 @@ from propagation_demo import propagation_demo, scenario_result
 
 class ssb_network_simulator:
     def __init__ (self, num_nodes: int = 10, friends_mode: str = 'range',
-                  friends_range: Tuple[int, int] = (2, 5), friends_fixed: int = 3, 
-                  base_port: int = 8000, host_ip: str = '192.168.56.1',
+                  friends_range: Tuple[int, int] = (2, 5), friends_fixed: int = 3,
                   log_file: str = None, seed: int = None):
         self.num_nodes = num_nodes
         self.friends_mode = friends_mode # either 'random', 'range', 'fixed'
@@ -22,8 +21,12 @@ class ssb_network_simulator:
         self.friends_fixed = friends_fixed
 
         #Adding a seed for reproducability! Can be added through cmd call
-        self.seed = seed if seed is not None else random.randint(0, 99999)
+        if seed is None:
+            self.seed = random.randint(0, 99999)   
+        else:
+            self.seed = seed
         random.seed(self.seed)
+        
 
         self.client = docker.from_env()
         self.project_name = "ssb-sim"
@@ -34,12 +37,7 @@ class ssb_network_simulator:
         self.router_ips = {}
         self.connection_details = []
 
-        self.data_dir = Path('./data')
-        #self.discovery_dir = Path('./discovery')
         self.logs_dir = Path('./logs')
-
-        self.data_dir.mkdir(exist_ok=True)
-        #self.discovery_dir.mkdir(exist_ok=True)
         self.logs_dir.mkdir(exist_ok=True)
 
         if log_file is None:
@@ -74,6 +72,7 @@ class ssb_network_simulator:
         self.logger.handlers = []
         
         # File handler (DEBUG level - everything)
+        ## mode 'w' write, rather than 'a' append
         file_handler = logging.FileHandler(self.log_file, mode='w', encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
         file_formatter = logging.Formatter(
@@ -234,24 +233,13 @@ class ssb_network_simulator:
         for i in range(self.num_nodes):
             node_start = time.time()
             node_name = f"{self.project_name}-node-{i+1}"
-            #port = self.base_port + i
             
             #Assigning nodes to LANs
             lan_index = i % len(self.networks)
-            #network = self.networks[lan_index]['network']
             network_name = self.networks[lan_index]['name']
             
-            # Create data directory - like I did in first example, but unsure if I should continue to do so. I suppose for sake of being able to check it later?
-            # Would doing so slow everything down and effect how Docker runs the simulation, if I'm saving data to my local machine?
-            # Or, as this is happening at build time, is it okay? Should I just share the data from the nodes' logs once the entire simulation is over
-            # just to make sure this isn't a factor?
-            node_data_dir = self.data_dir / f"node-{i+1}"
-            node_data_dir.mkdir(exist_ok=True)
-            
             self.logger.info(f"  Creating {node_name}...")
-            #self.logger.debug(f"    Port mapping: {port} -> 8008")
             self.logger.debug(f"    Network: {network_name}")
-            self.logger.debug(f"    Data directory: {node_data_dir}")
             
             try:
                 container = self.client.containers.run(
@@ -259,14 +247,6 @@ class ssb_network_simulator:
                     name=node_name,
                     hostname=node_name,
                     detach=True,
-                    #ports={
-                    #    '8008/tcp': port
-                    #},
-                    volumes={
-                        str(node_data_dir.absolute()): {'bind': '/root/.ssb', 'mode': 'rw'}
-                        #,
-                        #str(self.discovery_dir.absolute()): {'bind': '/discovery', 'mode': 'rw'}
-                    },
                     network=network_name,
                     remove=False
                 )
@@ -274,7 +254,6 @@ class ssb_network_simulator:
                 node_info = {
                     'name': node_name,
                     'container': container,
-                    #'port': port,
                     'lan': lan_index,
                     'lan_name': network_name,
                     'id': i + 1,
@@ -769,7 +748,8 @@ def main():
         friends_fixed=args.friends_fixed,
         #base_port=args.base_port,
         #host_ip=args.host_ip,
-        log_file=args.log_file
+        log_file=args.log_file,
+        seed = args.seed
     )
     
     if args.cleanup:

@@ -24,8 +24,6 @@ RUN npm install sodium-native
 
 WORKDIR /app
 
-VOLUME /data
-
 EXPOSE 8008
 
 CMD ["ssb-server", "start"]
