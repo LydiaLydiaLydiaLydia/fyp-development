@@ -338,6 +338,8 @@ class propagation_demo:
         result = self._make_result('author_dropout', msg_id, posted_at, [node_name], propagation)
 
         bootstrap_peers = self._get_bootstrap_peers(node_name, [node_name])
+        if bootstrap_peers is None:
+            bootstrap_peers = [node_name]
         peer_ids = [
             self.nodes[peer]['info']['id']
             for peer in bootstrap_peers
