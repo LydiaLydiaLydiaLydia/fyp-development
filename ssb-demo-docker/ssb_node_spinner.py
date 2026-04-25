@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import shutil
 
 import docker
 import json
@@ -21,12 +22,10 @@ class ssb_network_simulator:
         self.friends_fixed = friends_fixed
 
         #Adding a seed for reproducability! Can be added through cmd call
+        self.seed = seed 
         if seed is None:
-            self.seed = random.randint(0, 99999)   
-        else:
-            self.seed = seed
-        random.seed(self.seed)
-        
+            random.randint(0, 99999)
+            random.seed(self.seed)
 
         self.client = docker.from_env()
         self.project_name = "ssb-sim"
@@ -94,27 +93,40 @@ class ssb_network_simulator:
         self.logger.debug(f"Logging initialized. File: {self.log_file}")
 
     def cleanup_existing(self):
-        """Remove any existing containers and networks from previous runs."""
         self.logger.info("Cleaning up existing containers and networks...")
         cleanup_start = time.time()
-        
+
         containers_removed = 0
         networks_removed = 0
-        
-        # Stop and remove containers
+
         self.logger.debug("Searching for existing containers...")
         for container in self.client.containers.list(all=True):
-            if container.name.startswith(f"{self.project_name}-node-") or container.name.startswith(f"{self.project_name}-router"):
+            if container.name.startswith(f"{self.project_name}-node-") or \
+            container.name.startswith(f"{self.project_name}-router"):
                 self.logger.info(f"  Removing container: {container.name}")
-                self.logger.debug(f"    Container ID: {container.id}")
                 try:
+                    # Clear the SSB data directory from inside the container
+                    # while it's still running, so root-owned files (like
+                    # 'secret') can be deleted without Windows permission errors.
+                    if container.status == 'running':
+                        container.exec_run("rm -rf /root/.ssb", stderr=False)
+                        self.logger.debug(f"    Cleared /root/.ssb in {container.name}")
+
                     container.stop(timeout=10)
-                    self.logger.debug(f"    Stopped {container.name}")
                     container.remove()
-                    self.logger.debug(f"    Removed {container.name}")
                     containers_removed += 1
                 except Exception as e:
                     self.logger.error(f"    Error removing {container.name}: {e}")
+
+        # Now it's safe to remove the host-side data directories
+        self.logger.info("Clearing node data directories...")
+        for node_dir in self.data_dir.iterdir():
+            if node_dir.is_dir() and node_dir.name.startswith('node-'):
+                try:
+                    shutil.rmtree(node_dir)
+                    self.logger.debug(f"  Cleared {node_dir}")
+                except Exception as e:
+                    self.logger.warning(f"  Could not clear {node_dir}: {e}")
         
         # Remove networks
         self.logger.debug("Searching for existing networks...")
@@ -128,7 +140,7 @@ class ssb_network_simulator:
                     networks_removed += 1
                 except Exception as e:
                     self.logger.warning(f"    Could not remove network {network.name}: {e}")
-        
+
 
         cleanup_duration = time.time() - cleanup_start
         self.logger.info(f"Cleanup complete: {containers_removed} containers, {networks_removed} networks removed ({cleanup_duration:.2f}s)")

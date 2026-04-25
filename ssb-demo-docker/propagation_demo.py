@@ -7,7 +7,8 @@ import time
 import json
 import matplotlib.pyplot as plt
 
-
+#each scenario run will have a set of results in the same form and will need to be logged and plotted
+#so I've made a class for it
 class scenario_result:
 
     def __init__(self, name, message_id, posted_at, nodes_down, propagation_results, logs_dir, logger):
@@ -25,7 +26,6 @@ class scenario_result:
         self.propagation_rate = self._get_prop_rate()
 
     def report(self):
-        """Explicitly trigger logging, printing, and plotting for this result."""
         self._log_result()
         self._print_result()
         self._plot_scenario()
@@ -33,8 +33,8 @@ class scenario_result:
     def _get_successes(self):
         return sum(1 for val in self.propagation_results.values() if val['received'])
 
+    #public accessor
     def get_successes(self):
-        """Public accessor used by scenario logic to check propagation state."""
         return self._get_successes()
 
     def _get_elapsed_list(self):
@@ -54,6 +54,8 @@ class scenario_result:
             return 0
         return self.successes / len(self.propagation_results)
 
+
+    #for displaying the timestamps in a human readable way!
     def _for_humans(self, mili_value):
         seconds, miliseconds = divmod(mili_value, 1000)
         minutes, secs = divmod(seconds, 60)
@@ -180,8 +182,9 @@ class propagation_demo:
             lan_graph[lan_name].add(node['name'])
         return lan_graph
 
+    #creating a scenario_result
     def _make_result(self, name, msg_id, posted_at, nodes_down, propagation):
-        """Helper to construct a scenario_result with the shared logs_dir."""
+        
         result = scenario_result(
             name, msg_id, posted_at, nodes_down, propagation,
             self.simulator.logs_dir, self.simulator.logger
@@ -190,11 +193,7 @@ class propagation_demo:
         return result
 
     def classify_nodes(self, author_name: str, graph: dict):
-        """
-        Return (direct, indirect) sets relative to author_name.
-        Direct includes both outbound follows and nodes that follow author back,
-        since SSB gossip is symmetric — replication occurs regardless of follow direction.
-        """
+
         direct = {
             peer for peer in graph[author_name]
         } | {
@@ -210,14 +209,7 @@ class propagation_demo:
         return direct, indirect
 
     def _poll_propagation(self, node_set, message_id, time_posted, timeout_in_mins):
-        """
-        Poll a set of nodes in parallel until all have received message_id
-        or the timeout expires.
 
-        Parallelising polls matters for result accuracy: sequential polling
-        introduces artificial latency into elapsed timestamps for nodes polled
-        later in the list.
-        """
         timeout = time.time() + timeout_in_mins * 60
         propagation = {
             node_name: {
@@ -264,7 +256,7 @@ class propagation_demo:
         b_peers.append(node_name)
         return 
 
-    def restart_node(self, node_name, bootstrap_peers=None):
+    def restart_node(self, node_name, bootstrap_peers=None, feeds_to_request=None):
         self.nodes[node_name]['container'].start()
         self.simulator.logger.info(f"Restarted {node_name}, waiting for SSB to be ready...")
 
@@ -288,11 +280,25 @@ class propagation_demo:
                         f'ssb-server gossip.reconnect "{peer_addr}"'
                     )
                     ready = peer_reconnect_attempt.exit_code
-                    self.simulator.logger.debug(f"Result: {peer_reconnect_attempt.output.decode()}")
                     if ready == 0:
                         break
                     time.sleep(2)
                 self.simulator.logger.info(f"{node_name} successfully contacted {peer}")
+
+        # Explicitly request replication of specific feeds rather than waiting
+        # for SSB's gossip scheduler to decide to sync them. Without this,
+        # ssb-replicate only syncs the connecting peer's own feed on reconnect
+        # and then waits passively, meaning the author's feed may never arrive
+        # within the polling window.
+        if feeds_to_request:
+            for feed_id in feeds_to_request:
+                result = self.nodes[node_name]['container'].exec_run(
+                    f'ssb-server replicate.request --id "{feed_id}" --replicate true'
+                )
+                self.simulator.logger.info(
+                    f"{node_name}: requested replication of {feed_id[:20]}... "
+                    f"(exit {result.exit_code})"
+                )
 
     # ------------------------------------------------------------------ #
     #  Scenarios
@@ -332,7 +338,11 @@ class propagation_demo:
         result = self._make_result('author_dropout', msg_id, posted_at, [node_name], propagation)
 
         bootstrap_peers = self._get_bootstrap_peers(node_name, [node_name])
-        self.restart_node(node_name, bootstrap_peers)
+        peer_ids = [
+            self.nodes[peer]['info']['id']
+            for peer in bootstrap_peers
+        ]
+        self.restart_node(node_name, bootstrap_peers, feeds_to_request=peer_ids)
         return result
 
     def run_lan_dropout(self, node_name):
@@ -346,6 +356,16 @@ class propagation_demo:
             if self.nodes[node]['lan_name'] == node_lan:
                 same_lan_direct.append(node)
                 direct_copy.remove(node)
+
+        #added safeguard for nonsense
+        if not direct_copy and not same_lan_direct:
+            self.simulator.logger.warning(
+                f"run_lan_dropout: node-1 has no cross-LAN or same-LAN direct connections "
+                f"— skipping scenario as it would produce no meaningful data"
+            )
+            return None, None
+
+        print(f"Direct connections to {node_name} not in {node_lan}: {direct_copy}")
 
         print(f"Direct connections to {node_name} not in {node_lan}: {direct_copy}")
         print(f"Nodes in same LAN as author: {same_lan_nodes}")
@@ -398,12 +418,14 @@ class propagation_demo:
         non_lan_propagation = self._poll_propagation(direct_copy, msg_id, posted_at, 5)
 
         # Restart LAN nodes and measure catch-up
+        author_id = self.nodes[node_name]['info']['id']
         for node in same_lan_nodes:
             bootstrap_peers = self._get_bootstrap_peers(node_name, same_lan_nodes)
-            self.restart_node(node, bootstrap_peers)
+            self.restart_node(node, bootstrap_peers, feeds_to_request=[author_id])
 
         restarted_at = time.time() * 1000
-        same_lan_propagation = self._poll_propagation(same_lan_direct, msg_id, restarted_at, 5)
+        nodes_to_catchup = same_lan_nodes - {node_name}
+        same_lan_propagation = self._poll_propagation(nodes_to_catchup, msg_id, restarted_at, 5)
 
         non_lan_result = self._make_result(
             'same_lan_dropout', msg_id, posted_at, same_lan_nodes, non_lan_propagation
@@ -488,10 +510,12 @@ class propagation_demo:
 
 
         # Restart dropped nodes and measure catch-up
+        author_id = self.nodes[node_name]['info']['id']
         restart_time = time.time() * 1000
+        
         for node in nodes_to_drop:
             bootstrap_peers = self._get_bootstrap_peers(node_name, nodes_to_drop)
-            self.restart_node(node, bootstrap_peers)
+            self.restart_node(node, bootstrap_peers, feeds_to_request=[author_id])
 
         dropout_propagation = self._poll_propagation(nodes_to_drop, msg_id, restart_time, 5)
 
