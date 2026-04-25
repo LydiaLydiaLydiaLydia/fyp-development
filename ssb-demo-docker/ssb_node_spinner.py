@@ -118,16 +118,6 @@ class ssb_network_simulator:
                     containers_removed += 1
                 except Exception as e:
                     self.logger.error(f"    Error removing {container.name}: {e}")
-
-        # Now it's safe to remove the host-side data directories
-        self.logger.info("Clearing node data directories...")
-        for node_dir in self.data_dir.iterdir():
-            if node_dir.is_dir() and node_dir.name.startswith('node-'):
-                try:
-                    shutil.rmtree(node_dir)
-                    self.logger.debug(f"  Cleared {node_dir}")
-                except Exception as e:
-                    self.logger.warning(f"  Could not clear {node_dir}: {e}")
         
         # Remove networks
         self.logger.debug("Searching for existing networks...")
