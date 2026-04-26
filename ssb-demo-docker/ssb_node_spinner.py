@@ -788,11 +788,11 @@ def main():
             prop_demo = propagation_demo(simulator)
             stats = prop_demo.run_baseline('ssb-sim-node-1')
        
-            #author_drop_stats = prop_demo.run_author_dropout('ssb-sim-node-1')
+            author_drop_stats = prop_demo.run_author_dropout('ssb-sim-node-1')
             
-            #local_drop_stats, local_drop_catchup_stats = prop_demo.run_lan_dropout('ssb-sim-node-1')
+            local_drop_stats, local_drop_catchup_stats = prop_demo.run_lan_dropout('ssb-sim-node-1')
 
-            #catch_up_stats1, catch_up_stats2 = prop_demo.run_dropout_catchup('ssb-sim-node-1')
+            catch_up_stats1, catch_up_stats2 = prop_demo.run_dropout_catchup('ssb-sim-node-1')
 
             prop_demo.run_lan_migration('ssb-sim-node-1')
 
