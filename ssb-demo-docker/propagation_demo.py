@@ -547,6 +547,7 @@ class propagation_demo:
 
         # stopping the ssb-server process
         node['container'].exec_run("pkill -f ssb-server")
+
         
         # Polling until the process is gone
         deadline = time.time() + 15
@@ -562,7 +563,8 @@ class propagation_demo:
             time.sleep(2)
 
         # Having to explicityly remove lock files, as it was a problem before :(
-        node['container'].exec_run("rm -f /root/.ssb/LOCK /root/.ssb/blobs_push/LOCK")
+        node['container'].exec_run("rm -f /root/.ssb/LOCK /root/.ssb/blobs_push/LOCK /root/.ssb/db/LOCK")
+        
 
         old_lan = node['lan_name']
         old_lan_network = self.simulator.client.networks.get(old_lan)
