@@ -479,6 +479,7 @@ class propagation_demo:
             self.nodes[node]['container'].stop(timeout=0)
             print(f"Stopped container {node}")
 
+        time.sleep(10)
         cmd = 'ssb-server publish --type post --text "heya its node 1 again. hope everyones having a great day"'
         result = self.nodes[node_name]['container'].exec_run(cmd, stderr=True)
         if result.exit_code == 0:
@@ -559,6 +560,7 @@ class propagation_demo:
         new_lan_network = self.simulator.client.networks.get(new_lan)
         new_lan_network.connect(node['container'])
         node['container'].reload()
+        time.sleep(5)
         new_ip = node['container'].attrs['NetworkSettings']['Networks'][new_lan]['IPAddress']
         self.simulator.logger.info(f"{node_name}: connected to {new_lan}, new IP address {new_ip}")
 
@@ -596,7 +598,6 @@ class propagation_demo:
             peer_address = self.nodes[peer_name]['info']['address']
             node['container'].exec_run(f'ssb-server gossip.connect "{peer_address}"')
             self.simulator.logger.info(f"{node_name}: re-gossiped to {peer_name} at {new_ip}")
-            break
 
         migration_time = time.time() * 1000
         cmd = 'ssb-server publish --type post --text "Hi its me and ive changed LAN!!!"'
