@@ -293,7 +293,7 @@ class propagation_demo:
         if feeds_to_request:
             for feed_id in feeds_to_request:
                 result = self.nodes[node_name]['container'].exec_run(
-                    f'ssb-server replicate.request --id "{feed_id}" --replicate true'
+                    f'ssb-server replicate.request "{feed_id}"'
                 )
                 self.simulator.logger.info(
                     f"{node_name}: requested replication of {feed_id[:20]}... "
