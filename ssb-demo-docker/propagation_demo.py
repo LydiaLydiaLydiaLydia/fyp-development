@@ -545,26 +545,7 @@ class propagation_demo:
         node = self.nodes[node_name]
         direct, indirect = self.classify_nodes(node_name, self.connection_graph)
 
-        # stopping the ssb-server process
-        node['container'].exec_run("pkill -f ssb-server")
-
-        
-        # Polling until the process is gone
-        deadline = time.time() + 15
-        while time.time() < deadline:
-            check = node['container'].exec_run("pgrep -f ssb-server")
-            if check.exit_code != 0:  # pgrep returns 1 if no process found
-                self.simulator.logger.info(f"{node_name}: ssb-server process confirmed dead")
-                break
-            time.sleep(0.5)
-        else:
-            self.simulator.logger.warning(f"{node_name}: ssb-server did not die cleanly, trying SIGKILL")
-            node['container'].exec_run("pkill -9 -f ssb-server")
-            time.sleep(2)
-
-        # Having to explicityly remove lock files, as it was a problem before :(
-        node['container'].exec_run("rm -f /root/.ssb/LOCK /root/.ssb/blobs_push/LOCK /root/.ssb/db/LOCK")
-        
+        node['container'].stop(timeout=10)
 
         old_lan = node['lan_name']
         old_lan_network = self.simulator.client.networks.get(old_lan)
@@ -587,11 +568,9 @@ class propagation_demo:
             "allowPrivate": True
         })
 
+        node['container'].start()
+
         time.sleep(2)
-        # Starting the ssb-server process with the new IP
-        node['container'].exec_run(
-            f'ssb-server start --host {new_ip} &', detach=True
-        )
         
         # Waiting for it to actually be responsive before proceeding
         deadline = time.time() + 30
