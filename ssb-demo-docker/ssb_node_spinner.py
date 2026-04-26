@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import List, Dict, Tuple
 from datetime import datetime
 from propagation_demo import propagation_demo, scenario_result
+import tarfile
+import io
+
 
 class ssb_network_simulator:
     def __init__ (self, num_nodes: int = 10, friends_mode: str = 'range',
@@ -61,6 +64,25 @@ class ssb_network_simulator:
         self.logger.info(f"  - Random seed: {self.seed}")
         self.logger.info(f"  - Log file: {self.log_file}")
         self.logger.info("="*80)
+
+    # new write config method
+    # using TARS
+    def _write_config(self, node, config: dict):
+        config_json = json.dumps(config, indent=2).encode('utf-8')
+        
+        #creating an in-memory tar file (this io.BytesIO() is like an input stream buffer)
+        tarstream = io.BytesIO()
+        # 'w' mode is open for uncompressed writing
+        with tarfile.open(fileobj=tarstream, mode='w') as tar:
+            info = tarfile.TarInfo(name='config')
+            info.size = len(config_json)
+            tar.addfile(info, io.BytesIO(config_json))
+        # .seek(0) moves the cursor back to the start of the buffer
+        tarstream.seek(0)
+        
+        #container.put_archive is a Docker technique of putting a tarfile in there
+        node['container'].put_archive('/root/.ssb/', tarstream)
+        self.logger.info(f"  {node['name']}: config written ({config['host']})")
 
     def _setup_logging(self):
         """Setup logging configuration."""

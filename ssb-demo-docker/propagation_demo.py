@@ -564,6 +564,12 @@ class propagation_demo:
         # Having to explicityly remove lock files, as it was a problem before :(
         node['container'].exec_run("rm -f /root/.ssb/LOCK /root/.ssb/blobs_push/LOCK")
 
+        self.simulator._write_config(node, {
+            "host": new_ip,
+            "port": 8008,
+            "allowPrivate": True
+        })
+
         old_lan = node['lan_name']
         old_lan_network = self.simulator.client.networks.get(old_lan)
         # using the docker network object disconnect() to remove the container from the LAN
