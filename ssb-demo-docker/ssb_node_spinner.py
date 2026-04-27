@@ -313,8 +313,8 @@ class ssb_network_simulator:
             node['gateway_ip'] = gateway_ip
 
             config = {
-                "host": container_ip,
-                "port": 8008,
+                #"host": container_ip,
+                #"port": 8008,
                 "allowPrivate": True,
                 "gossip": {
                     "connections": 8,
