@@ -323,7 +323,7 @@ class ssb_network_simulator:
                 }
             }
 
-            self.simulator._write_config(node, config)
+            self._write_config(node, config)
 
 
         self.logger.info("Node config complete")
