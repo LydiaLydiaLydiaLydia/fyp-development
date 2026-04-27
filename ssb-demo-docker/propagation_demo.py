@@ -268,7 +268,7 @@ class propagation_demo:
                 break
             time.sleep(2)
 
-        #self.nodes[node_name]['container'].exec_run('ssb-server start', stderr=False)
+        self.nodes[node_name]['container'].exec_run('ssb-server start', stderr=False)
 
         if bootstrap_peers:
             for peer in bootstrap_peers:
