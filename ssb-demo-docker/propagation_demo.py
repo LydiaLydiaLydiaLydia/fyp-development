@@ -250,6 +250,21 @@ class propagation_demo:
                 time.sleep(3)
 
         return propagation
+    
+    def _refresh_node_ip(self, node_name):
+        node = self.nodes[node_name]
+        node['container'].reload()
+        net_data = node['container'].attrs['NetworkSettings']['Networks'][node['lan_name']]
+        lan_ip = net_data['IPAddress']
+        node['lan_ip'] = lan_ip
+        
+        # Update the address in node['info'] too so gossip commands use the fresh IP
+        key = node['info']['key']
+        node['info']['host'] = lan_ip
+        node['info']['address'] = f"net:{lan_ip}:8008~shs:{key}"
+        
+        self.simulator.logger.debug(f"{node_name}: refreshed IP to {lan_ip}")
+        return lan_ip
 
     def _get_bootstrap_peers(self, node_name, nodes_down):
         direct, _ = self.classify_nodes(node_name, self.connection_graph)
@@ -277,6 +292,7 @@ class propagation_demo:
                 self.simulator.logger.info(f"{node_name} not ready yet ({e.status_code}), retrying...")
             time.sleep(2)
 
+        self._refresh_node_ip(node_name)
         self.nodes[node_name]['container'].exec_run('ssb-server start', stderr=False)
 
         if bootstrap_peers:
@@ -309,9 +325,6 @@ class propagation_demo:
                     f"(exit {result.exit_code})"
                 )
 
-    # ------------------------------------------------------------------ #
-    #  Scenarios
-    # ------------------------------------------------------------------ #
 
     def run_baseline(self, node_name) -> scenario_result:
         direct, indirect = self.classify_nodes(node_name, self.connection_graph)
@@ -573,7 +586,7 @@ class propagation_demo:
         
 
         node['container'].start()
-        
+        self._refresh_node_ip(node_name)
         new_ip = node['container'].attrs['NetworkSettings']['Networks'][new_lan]['IPAddress']
         self.simulator.logger.info(f"{node_name}: connected to {new_lan}, new IP address {new_ip}")
 

@@ -391,7 +391,13 @@ class ssb_network_simulator:
     def configure_node_gateways(self):
         self.logger.info("Configuring gateway route on nodes...")
 
+        #remember the self.networks list looks like 
+        #[{ "network" : (the docker network object),
+        #   "name": "ssb-sim-lan-(number)",
+        #   "subnet": "10.10.(number).0/24",
+        #   "id": (the docker network object id)}]
         for node in self.nodes:
+            # where node['lan_name'] is in the form 'ssb-sim-lan-(number)'
             lan_name = node['lan_name']
             router_ip = self.router_ips[lan_name]
 
@@ -417,7 +423,6 @@ class ssb_network_simulator:
         
         ready_nodes = set()
         check_interval = 2
-        last_log_time = time.time()
         
         while len(ready_nodes) < self.num_nodes:
             elapsed = time.time() - wait_start
@@ -451,21 +456,18 @@ class ssb_network_simulator:
                         ready_nodes.add(name)
                         self.logger.info(f"{name} is ready ({len(ready_nodes)}/{self.num_nodes})")
                 
-            
             if len(ready_nodes) < self.num_nodes:
                 # Log progress every 10 seconds
                 if time.time() - last_log_time > 10:
                     self.logger.debug(f"Progress: {len(ready_nodes)}/{self.num_nodes} ready after {elapsed:.1f}s")
                     last_log_time = time.time()
                 
-                time.sleep(check_interval)
-        
-        wait_duration = time.time() - wait_start
+                time.sleep(check_interval)   
         
         if len(ready_nodes) == self.num_nodes:
-            self.logger.info(f"All {len(ready_nodes)} nodes ready ({wait_duration:.2f}s)")
+            self.logger.info(f"All {len(ready_nodes)} nodes ready")
         else:
-            self.logger.warning(f"Only {len(ready_nodes)}/{self.num_nodes} nodes ready after {wait_duration:.2f}s")
+            self.logger.warning(f"Only {len(ready_nodes)}/{self.num_nodes} nodes ready")
         
         self.logger.debug("-"*80)
         return len(ready_nodes) == self.num_nodes
@@ -493,11 +495,10 @@ class ssb_network_simulator:
             key = node_id.replace('@', '').replace('.ed25519', '')
 
             #getting ip address of node
-            lan_ip = node.get('lan_ip')
-            if not lan_ip:
-                node['container'].reload()
-                net_data = node['container'].attrs['NetworkSettings']['Networks'][node['lan_name']]
-                lan_ip = net_data['IPAddress']
+            node['container'].reload()
+            net_data = node['container'].attrs['NetworkSettings']['Networks'][node['lan_name']]
+            lan_ip = net_data['IPAddress']
+            node['lan_ip'] = lan_ip 
 
             #lan_name = node['lan_name']
             #network_data = node['container'].attrs['NetworkSettings']['Networks'][lan_name]
