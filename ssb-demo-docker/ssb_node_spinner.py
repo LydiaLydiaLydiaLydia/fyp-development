@@ -371,7 +371,14 @@ class ssb_network_simulator:
                     "connections": 8,
                     "friends": True,
                     "global": True
+                },
+                "timers": {
+                    "connection": 10000,
+                    "reconnect": 1000,
+                    "ping": 30000,
+                    "handshake": 2000
                 }
+
             }
             node_n, ready_code = self._check_node_ready(node)
             while(ready_code == False):
