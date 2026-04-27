@@ -24,13 +24,13 @@ class ssb_network_simulator:
         self.friends_range = friends_range
         self.friends_fixed = friends_fixed
 
-        #Adding a seed for reproducability! Can be added through cmd call
+        #Adding a seed for reproducability! Can be added through cmd arg
         self.seed = seed 
         if seed is None:
             self.seed = random.randint(0, 99999)
-
         random.seed(self.seed)
 
+        #connecting to the docker daemon
         self.client = docker.from_env()
         self.project_name = "ssb-sim"
         self.nodes: List[Dict] = []
@@ -65,28 +65,8 @@ class ssb_network_simulator:
         self.logger.info(f"  - Log file: {self.log_file}")
         self.logger.info("="*80)
 
-    # new write config method
-    # using TARS
-    def _write_config(self, node, config: dict):
-        config_json = json.dumps(config, indent=2).encode('utf-8')
-        
-        #creating an in-memory tar file (this io.BytesIO() is like an input stream buffer)
-        tarstream = io.BytesIO()
-        # 'w' mode is open for uncompressed writing
-        with tarfile.open(fileobj=tarstream, mode='w') as tar:
-            info = tarfile.TarInfo(name='config')
-            info.size = len(config_json)
-            tar.addfile(info, io.BytesIO(config_json))
-        # .seek(0) moves the cursor back to the start of the buffer
-        tarstream.seek(0)
-        
-        #container.put_archive is a Docker technique of putting a tarfile in there
-        node['container'].put_archive('/root/.ssb/', tarstream)
-        self.logger.info(f"  {node['name']}: config written")
-
     def _setup_logging(self):
-        """Setup logging configuration."""
-        # Create logger
+        # Create logger (level is debug)
         self.logger = logging.getLogger('SSBSimulator')
         self.logger.setLevel(logging.DEBUG)
         
@@ -104,6 +84,7 @@ class ssb_network_simulator:
         file_handler.setFormatter(file_formatter)
         
         # Console handler (INFO level - less verbose)
+        ## don't need to print(), this prints info level logs to console
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_formatter = logging.Formatter('%(message)s')
@@ -115,13 +96,29 @@ class ssb_network_simulator:
         
         self.logger.debug(f"Logging initialized. File: {self.log_file}")
 
+    def _write_config(self, node, config: dict):
+        # new write config method
+        # using TARS
+
+        # serialising the Dictionary to JSON 
+        config_json = json.dumps(config, indent=2).encode('utf-8')
+        
+        #creating an in-memory tar file (this io.BytesIO() is like an input stream buffer)
+        tarstream = io.BytesIO()
+        # 'w' mode is open for uncompressed writing
+        with tarfile.open(fileobj=tarstream, mode='w') as tar:
+            info = tarfile.TarInfo(name='config')
+            info.size = len(config_json)
+            tar.addfile(info, io.BytesIO(config_json))
+        # .seek(0) moves the cursor back to the start of the buffer
+        tarstream.seek(0)
+        
+        #container.put_archive is a Docker technique of putting a tarfile in there
+        node['container'].put_archive('/root/.ssb/', tarstream)
+        self.logger.info(f"  {node['name']}: config written")
+
     def cleanup_existing(self):
         self.logger.info("Cleaning up existing containers and networks...")
-        cleanup_start = time.time()
-
-        containers_removed = 0
-        networks_removed = 0
-
         self.logger.debug("Searching for existing containers...")
         for container in self.client.containers.list(all=True):
             if container.name.startswith(f"{self.project_name}-node-") or \
@@ -137,7 +134,6 @@ class ssb_network_simulator:
 
                     container.stop(timeout=10)
                     container.remove()
-                    containers_removed += 1
                 except Exception as e:
                     self.logger.error(f"    Error removing {container.name}: {e}")
         
@@ -150,24 +146,19 @@ class ssb_network_simulator:
                 try:
                     network.remove()
                     self.logger.debug(f"    Removed {network.name}")
-                    networks_removed += 1
                 except Exception as e:
                     self.logger.warning(f"    Could not remove network {network.name}: {e}")
 
-
-        cleanup_duration = time.time() - cleanup_start
-        self.logger.info(f"Cleanup complete: {containers_removed} containers, {networks_removed} networks removed ({cleanup_duration:.2f}s)")
+        self.logger.info(f"Cleanup complete.")
         self.logger.debug("-"*80)
 
     def create_networks(self):
         self.logger.info("Creating Docker networks...")
-        network_start = time.time()
         
         # Each LAN gets 5 nodes max
         num_lans = (self.num_nodes + 4) // 5
         self.logger.debug(f"Creating {num_lans} LANs for {self.num_nodes} nodes")
         
-        #self.networks = []
         for i in range(num_lans):
             network_name = f"{self.project_name}-lan-{i+1}"
             subnet = f"10.10.{i+1}.0/24"
@@ -197,8 +188,7 @@ class ssb_network_simulator:
                 self.logger.error(f"  Failed to create {network_name}: {e}")
                 raise
         
-        network_duration = time.time() - network_start
-        self.logger.info(f"Created {len(self.networks)} networks ({network_duration:.2f}s)")
+        self.logger.info(f"Created {len(self.networks)} networks")
         self.logger.debug("-"*80)
 
     def create_router(self):
@@ -299,31 +289,25 @@ class ssb_network_simulator:
             net_name = net_info['name']
             # You can do #>docker inspect <container> [things you want to know about in CamelCase] https://docs.docker.com/reference/cli/docker/inspect/
             # through container.attrs[things you want to know about in CamelCase]
-            # and its a key: value JSON thing returned
+            # and its a key: value JSON obj returned
             net_data = self.router.attrs['NetworkSettings']['Networks'][net_name]
             ip = net_data['IPAddress']
             self.router_ips[net_name] = ip
             self.logger.debug(f"  Router IP on {net_name}: {ip}")
 
-        #self.router_ips = router_ips
         return self.router_ips
-    
-    
-
 
     def create_nodes(self):
         self.logger.info(f"Creating {self.num_nodes} SSB nodes...")
-        nodes_start = time.time()
         
         for i in range(self.num_nodes):
-            node_start = time.time()
             node_name = f"{self.project_name}-node-{i+1}"
             
             #Assigning nodes to LANs
             lan_index = i % len(self.networks)
             network_name = self.networks[lan_index]['name']
             
-            self.logger.info(f"  Creating {node_name}...")
+            self.logger.info(f"    Creating {node_name}...")
             self.logger.debug(f"    Network: {network_name}")
             
             try:
@@ -346,17 +330,14 @@ class ssb_network_simulator:
                 }
                 
                 self.nodes.append(node_info)
-                
-                node_duration = time.time() - node_start
-                self.logger.info(f"    Created in {node_duration:.2f}s")
-                self.logger.debug(f"    Container ID: {container.id}")
+        
+                self.logger.debug(f"    Created Container with ID: {container.id}")
                 
             except Exception as e:
                 self.logger.error(f"    Failed to create {node_name}: {e}")
                 raise
         
-        nodes_duration = time.time() - nodes_start
-        self.logger.info(f"Created {len(self.nodes)} nodes ({nodes_duration:.2f}s)")
+        self.logger.info(f"Created {len(self.nodes)} nodes)")
         self.logger.debug("-"*80)
 
     def configure_nodes(self):
