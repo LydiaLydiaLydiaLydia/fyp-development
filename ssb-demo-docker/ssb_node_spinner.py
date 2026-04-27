@@ -323,18 +323,8 @@ class ssb_network_simulator:
                 }
             }
 
-            config_json = json.dumps(config, indent=2)
+            self.simulator._write_config(node, config)
 
-            # Write config before SSB process reads it
-            # Using printf rather than echo to avoid shell escaping issues with JSON
-            result = node['container'].exec_run(
-                f"sh -c 'mkdir -p /root/.ssb && printf \"%s\" {repr(config_json)} > /root/.ssb/config'"
-            )
-
-            if result.exit_code != 0:
-                self.logger.error(f"  Failed to write config to {node['name']}: {result.output.decode()}")
-            else:
-                self.logger.info(f"  {node['name']}: config written ({container_ip})")
 
         self.logger.info("Node config complete")
 
