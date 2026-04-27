@@ -5,6 +5,7 @@ from pathlib import Path
 import random
 import time
 import json
+import docker
 import matplotlib.pyplot as plt
 
 #each scenario run will have a set of results in the same form and will need to be logged and plotted
@@ -260,12 +261,20 @@ class propagation_demo:
         self.nodes[node_name]['container'].start()
         self.simulator.logger.info(f"Restarted {node_name}, waiting for SSB to be ready...")
 
+        time.sleep(2)
+
         timeout = time.time() + 30
         while time.time() < timeout:
-            result = self.nodes[node_name]['container'].exec_run('ssb-server whoami', stderr=False)
-            if result.exit_code == 0:
-                self.simulator.logger.info(f"{node_name} is awake")
-                break
+            try:
+                result = self.nodes[node_name]['container'].exec_run('ssb-server whoami', stderr=False)
+                if result.exit_code == 0:
+                    self.simulator.logger.info(f"{node_name} is awake")
+                    break
+            #exception happens when container isn't ready!
+            # kept getting 409 error when container wasn't ready;
+            # so 409 means wait and retry
+            except docker.errors.APIError as e:
+                self.simulator.logger.info(f"{node_name} not ready yet ({e.status_code}), retrying...")
             time.sleep(2)
 
         self.nodes[node_name]['container'].exec_run('ssb-server start', stderr=False)
