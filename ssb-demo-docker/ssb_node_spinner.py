@@ -82,7 +82,7 @@ class ssb_network_simulator:
         
         #container.put_archive is a Docker technique of putting a tarfile in there
         node['container'].put_archive('/root/.ssb/', tarstream)
-        self.logger.info(f"  {node['name']}: config written ({config['host']})")
+        self.logger.info(f"  {node['name']}: config written")
 
     def _setup_logging(self):
         """Setup logging configuration."""
