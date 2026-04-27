@@ -322,7 +322,8 @@ class ssb_network_simulator:
                     "global": True
                 }
             }
-
+            while(self._check_node_ready(node)==False):
+                self.logger.debug(f"Waiting for node {node['name']} to be ready to write config")
             self._write_config(node, config)
 
 
