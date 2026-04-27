@@ -340,11 +340,23 @@ class ssb_network_simulator:
         self.logger.info(f"Created {len(self.nodes)} nodes)")
         self.logger.debug("-"*80)
 
+    def _check_node_ready(self, node:Dict):
+        #helper function to be used by thread executor in wait_for_nodes_ready,
+        ## as well as configure_ndoes 
+        try:
+            result = node['container'].exec_run("ssb-server whoami", stderr=False)
+            return node['name'], result.exit_code == 0
+        except Exception:
+            return node['name'], False
+
     def configure_nodes(self):
         self.logger.info("Writing SSB config to nodes...")
 
         for node in self.nodes:
+            # container.reload() loads the object from the docker daemon again 
+            ## with updated attributes (e.g., the ip information that was allocated)
             node['container'].reload()
+            # retrieving the NetworkSettings attributes from this node's LAN
             net_data = node['container'].attrs['NetworkSettings']['Networks'][node['lan_name']]
             container_ip = net_data['IPAddress']
             gateway_ip = net_data['Gateway']
@@ -354,8 +366,6 @@ class ssb_network_simulator:
             node['gateway_ip'] = gateway_ip
 
             config = {
-                #"host": container_ip,
-                #"port": 8008,
                 "allowPrivate": True,
                 "gossip": {
                     "connections": 8,
@@ -363,10 +373,11 @@ class ssb_network_simulator:
                     "global": True
                 }
             }
-            while(self._check_node_ready(node)==False):
+            node_n, ready_code = self._check_node_ready(node)
+            while(ready_code == False):
+                node_n, ready_code = self._check_node_ready(node)
                 self.logger.debug(f"Waiting for node {node['name']} to be ready to write config")
             self._write_config(node, config)
-
 
         self.logger.info("Node config complete")
 
@@ -392,15 +403,6 @@ class ssb_network_simulator:
                     self.logger.warning( f" ROute failed on {node['name']} : {cmd}")
                 else:
                     self.logger.debug(f"    {node['name']}: route to {subnet} via {router_ip}")
-
-    #new function to be used by thread executor in wait_for_nodes_ready
-    def _check_node_ready(self, node:Dict):
-        try:
-            result = node['container'].exec_run("ssb-server whoami", stderr=False)
-
-            return node['name'], result.exit_code == 0
-        except Exception:
-            return node['name'], False
     
     def wait_for_nodes_ready(self, timeout: int = 60):
         self.logger.info(f"Waiting for nodes to be ready (timeout: {timeout}s)...")
