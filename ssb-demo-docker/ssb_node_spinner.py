@@ -228,6 +228,66 @@ class ssb_network_simulator:
         except Exception as e:
             self.logger.error(f"Failed to create router: {e}")
 
+    def apply_network_conditions(self, bandwidth_kbit: int = None, latency_ms: int = None, jitter_ms: int = 0):
+
+        self.logger.info("Applying network conditions to router...")
+
+        # Get every interface on the router (for each LAN)
+        ## CLI: ls /sys/class/net/
+        result = self.router.exec_run("ls /sys/class/net/")
+        ifaces = [i for i in result.output.decode().split() if i.startswith("eth")]
+
+        for iface in ifaces:
+            # Clear any existing qdiscs first
+            ## qdisc = queueing discipline, how Linux queues traffic, and what I'm messing with
+            ## del(ete) dev(ice) 
+            ## root is the outbound queue of the interface: outbound to the LANs
+            r = self.router.exec_run(f"tc qdisc del dev {iface} root", stderr=False)
+            if r.exit_code != 0:
+                self.logger.debug(f"  {iface}: no existing qdisc to clear (ok on first run)")
+
+            if latency_ms is not None and bandwidth_kbit is not None:
+                # Combined: tbf (rate limiting) with netem (latency) as child
+                ## NOTE ON NAMING QDISC RULES: the handle tag is followed by a major:minor
+                ## labelling -- so I'm naming the qdisc 1:
+                ## the tbf is a token bucket filter which does RATE LIMITING
+                ## tbf needs to be told the maximum number of bits that can be sent 
+                ## instantaneously at one time before the rate limit kicks in 
+                ## (burst value) and the 'latency' to function 
+                ## where the latency is more like a cap to the queue: a maximum
+                ## amount of time a packet can sit in the queue before it's dropped
+                ## and these values are just unintrusive necessities, not relevant
+                cmd_tbf = (
+                    f"tc qdisc add dev {iface} root handle 1: tbf "
+                    f"rate {bandwidth_kbit}kbit burst 32kbit latency 400ms"
+                )
+                # this qdisc rule is being added as a child to 1:1
+                cmd_netem = (
+                    f"tc qdisc add dev {iface} parent 1:1 handle 10: netem "
+                    f"delay {latency_ms}ms {jitter_ms}ms"
+                )
+                self.router.exec_run(cmd_tbf)
+                r = self.router.exec_run(cmd_netem)
+
+            elif latency_ms is not None:
+                cmd = f"tc qdisc add dev {iface} root netem delay {latency_ms}ms {jitter_ms}ms"
+                r = self.router.exec_run(cmd)
+
+            elif bandwidth_kbit is not None:
+                cmd = (
+                    f"tc qdisc add dev {iface} root tbf "
+                    f"rate {bandwidth_kbit}kbit burst 32kbit latency 400ms"
+                )
+                r = self.router.exec_run(cmd)
+            else:
+                self.logger.info(f"  {iface}: no conditions applied")
+                continue
+
+            if r.exit_code != 0:
+                self.logger.warning(f"  {iface}: tc failed — {r.output.decode().strip()}")
+            else:
+                self.logger.info(f"  {iface}: {bandwidth_kbit}kbit/s, {latency_ms}ms +/- {jitter_ms}ms")
+
     def get_router_ips(self):
         self.logger.info("Getting router IPs on each LAN...")
         # for each LAN created, i need the IP address assigned to the 'router' container in order to 
@@ -778,6 +838,10 @@ def main():
         simulator.run()
         if args.prop_demo:
             print("Propagation demonstration underway...")
+            #adding networking conditions after connections are made, before scenarios
+            simulator.apply_network_conditions(bandwidth_kbit=17408, latency_ms=54)
+
+
             prop_demo = propagation_demo(simulator)
             stats = prop_demo.run_baseline('ssb-sim-node-1')
        
@@ -789,10 +853,6 @@ def main():
 
             prop_demo.run_lan_migration('ssb-sim-node-1')
 
-
-            #migration_stats = prop_demo.run_lan_migration('ssb-sim-node-1')
-            #prop_demo.print_result(migration_stats)
-            #prop_demo.log_result(migration_stats)
 
 
 if __name__ == '__main__':
