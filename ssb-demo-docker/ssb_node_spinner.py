@@ -316,9 +316,11 @@ class ssb_network_simulator:
                 "host": container_ip,
                 "port": 8008,
                 "allowPrivate": True,
-                #"caps": {
-                #    "shs": "1KHLiKZvAvjbY1ziZEHMXawbCEIM6qwjCDm3VYRan/s="
-                #}
+                "gossip": {
+                    "connections": 8,
+                    "friends": True,
+                    "global": True
+                }
             }
 
             config_json = json.dumps(config, indent=2)
