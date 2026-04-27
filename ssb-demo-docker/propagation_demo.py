@@ -586,6 +586,7 @@ class propagation_demo:
         
 
         node['container'].start()
+        self.nodes[node_name]['lan_name'] = new_lan
         self._refresh_node_ip(node_name)
         new_ip = node['container'].attrs['NetworkSettings']['Networks'][new_lan]['IPAddress']
         self.simulator.logger.info(f"{node_name}: connected to {new_lan}, new IP address {new_ip}")
