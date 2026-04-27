@@ -268,7 +268,7 @@ class propagation_demo:
                 break
             time.sleep(2)
 
-        self.nodes[node_name]['container'].exec_run('ssb-server start', stderr=False)
+        #self.nodes[node_name]['container'].exec_run('ssb-server start', stderr=False)
 
         if bootstrap_peers:
             for peer in bootstrap_peers:
@@ -479,7 +479,7 @@ class propagation_demo:
             self.nodes[node]['container'].stop(timeout=0)
             print(f"Stopped container {node}")
 
-        time.sleep(10)
+        time.sleep(30)
         cmd = 'ssb-server publish --type post --text "heya its node 1 again. hope everyones having a great day"'
         result = self.nodes[node_name]['container'].exec_run(cmd, stderr=True)
         if result.exit_code == 0:
@@ -561,6 +561,9 @@ class propagation_demo:
         new_lan_network.connect(node['container'])
         node['container'].reload()
         time.sleep(5)
+        
+
+        node['container'].start()
         new_ip = node['container'].attrs['NetworkSettings']['Networks'][new_lan]['IPAddress']
         self.simulator.logger.info(f"{node_name}: connected to {new_lan}, new IP address {new_ip}")
 
@@ -570,9 +573,7 @@ class propagation_demo:
             "allowPrivate": True
         })
 
-        node['container'].start()
-
-        time.sleep(2)
+        time.sleep(5)
         
         # Waiting for it to actually be responsive before proceeding
         deadline = time.time() + 30
