@@ -305,6 +305,13 @@ class ssb_network_simulator:
             #Assigning nodes to LANs
             lan_index = i % len(self.networks)
             network_name = self.networks[lan_index]['name']
+            subnet = self.networks[lan_index]['subnet']
+
+            nodes_on_this_lan = i //len(self.networks)
+            base_ip = subnet.rsplit('.', 1)[0]
+            static_ip = f"{base_ip}.{10+nodes_on_this_lan}"
+
+            self.logger.info(f"CREATING {node_name} with static IP {static_ip}............")
             
             self.logger.info(f"    Creating {node_name}...")
             self.logger.debug(f"    Network: {network_name}")
@@ -316,6 +323,9 @@ class ssb_network_simulator:
                     hostname=node_name,
                     detach=True,
                     network=network_name,
+                    networking_config={
+                        network_name: self.client.api.create_endpoint_config(ipv4_address=static_ip)
+                    },
                     remove=False
                 )
                 
