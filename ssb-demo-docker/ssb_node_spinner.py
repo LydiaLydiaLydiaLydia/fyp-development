@@ -422,6 +422,7 @@ class ssb_network_simulator:
         
         ready_nodes = set()
         check_interval = 2
+        last_log_time = time.time()
         
         while len(ready_nodes) < self.num_nodes:
             elapsed = time.time() - wait_start
