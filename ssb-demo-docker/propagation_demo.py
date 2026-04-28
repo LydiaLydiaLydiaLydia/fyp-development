@@ -255,16 +255,16 @@ class propagation_demo:
         node = self.nodes[node_name]
         node['container'].reload()
         net_data = node['container'].attrs['NetworkSettings']['Networks'][node['lan_name']]
-        lan_ip = net_data['IPAddress']
-        node['lan_ip'] = lan_ip
+        cont_ip = net_data['IPAddress']
+        node['cont_ip'] = cont_ip
         
         # Update the address in node['info'] too so gossip commands use the fresh IP
         key = node['info']['key']
-        node['info']['host'] = lan_ip
-        node['info']['address'] = f"net:{lan_ip}:8008~shs:{key}"
+        node['info']['host'] = cont_ip
+        node['info']['address'] = f"net:{cont_ip}:8008~shs:{key}"
         
-        self.simulator.logger.debug(f"{node_name}: refreshed IP to {lan_ip}")
-        return lan_ip
+        self.simulator.logger.debug(f"{node_name}: refreshed IP to {cont_ip}")
+        return cont_ip
 
     def _get_bootstrap_peers(self, node_name, nodes_down):
         direct, _ = self.classify_nodes(node_name, self.connection_graph)

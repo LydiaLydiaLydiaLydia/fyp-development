@@ -283,7 +283,6 @@ class ssb_network_simulator:
         # for each LAN created, i need the IP address assigned to the 'router' container in order to 
         # make it the other containers' Default Gateways
         self.router.reload()
-        #router_ips = {}
 
         for net_info in self.networks:
             net_name = net_info['name']
@@ -362,7 +361,7 @@ class ssb_network_simulator:
             gateway_ip = net_data['Gateway']
 
             # Store IPs on node dict for later use
-            node['lan_ip'] = container_ip
+            node['cont_ip'] = container_ip
             node['gateway_ip'] = gateway_ip
 
             config = {
@@ -497,37 +496,64 @@ class ssb_network_simulator:
             #getting ip address of node
             node['container'].reload()
             net_data = node['container'].attrs['NetworkSettings']['Networks'][node['lan_name']]
-            lan_ip = net_data['IPAddress']
-            node['lan_ip'] = lan_ip 
-
-            #lan_name = node['lan_name']
-            #network_data = node['container'].attrs['NetworkSettings']['Networks'][lan_name]
-            #LAN_address = network_data['Gateway']
-            #IP_address = network_data['IPAddress']
-            #print(f"LAN address is {LAN_address} and IP address is {IP_address}")
+            cont_ip = net_data['IPAddress']
+            node['cont_ip'] = cont_ip
             
-            address = f"net:{lan_ip}:8008~shs:{key}"
-            #lan_gossip_address = f"net:{IP_address}:8000~shs:{key}"
+            address = f"net:{cont_ip}:8008~shs:{key}"
             
             info = {
                 'name': node['name'],
                 'id': node_id,
                 'key': key,
-                'host': lan_ip,
+                'host': cont_ip,
                 'port': 8008,
-                'address': address#,
-                #'ip_address' : IP_address,
-                #'lan_gossip_address': lan_gossip_address,
-                #'lan_name' : lan_name
+                'address': address
             }
             
             node['info'] = info
-            self.logger.debug(f"  Address: {address}")
+            self.logger.info(f"  Multi-server address for node {node['name']}: {address}")
             return info
             
         except Exception as e:
             self.logger.error(f"  Error getting info for {node['name']}: {e}")
             raise
+
+    def gossip_and_follow(self, node_a: Dict, node_b: Dict) -> bool:
+        self.logger.debug(f"    Connecting {node_a['name']} -> {node_b['name']}...")
+        
+        #gossip.connect only needs to be used for TCP connectinos, i.e., extra-LAN
+        # connections that aren't automatically made via UDP gossip calls
+        try:
+            if node_a["lan_name"] != node_b["lan_name"]:
+                gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
+                result = node_a['container'].exec_run(gossip_cmd, stderr=True)
+
+                if result.exit_code != 0:
+                    self.logger.warning(f"         Gossip failed (exit {result.exit_code})")
+                    self.logger.debug(f"         Output: {result.output.decode()[:200]}")
+                    return False
+            
+                self.logger.debug(f"         Gossip successful")
+ 
+            # Follow
+            follow_cmd = f'ssb-server publish --type contact --contact "{node_b["info"]["id"]}" --following'
+            self.logger.debug(f"      Follow command: {follow_cmd}")
+            
+            result = node_a['container'].exec_run(follow_cmd, stderr=True)
+            
+            if result.exit_code != 0:
+                self.logger.warning(f"         Follow failed (exit {result.exit_code})")
+                self.logger.debug(f"         Output: {result.output.decode()[:200]}")
+                return False
+            
+            self.logger.debug(f"         Follow successful")
+            self.logger.info(f"         {node_a['name']} -> {node_b['name']}")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"   Error: {node_a['name']} -> {node_b['name']}: {e}")
+            return False
 
     def establish_connections(self):
         #The friends 'mode' stuff: allotting nodes with who they should connect with 
@@ -535,22 +561,15 @@ class ssb_network_simulator:
         connections_start = time.time()
         
         # Get info for all nodes
-        self.logger.info("  Gathering node information...")
-        info_start = time.time()
-        
+        self.logger.info("  Gathering node information...")      
         node_infos = []
         for node in self.nodes:
             try:
                 info = self.get_node_info(node)
-                #node_infos.append(info)
-                #node['info'] = info
                 self.logger.debug(f"  Got info for {node['name']}")
             except Exception as e:
                 self.logger.error(f"  Failed to get info for {node['name']}: {e}")
-        
-        info_duration = time.time() - info_start
-        #self.logger.info(f"    Gathered info for {len(node_infos)} nodes ({info_duration:.2f}s)")
-        
+         
         # Establish connections
         self.logger.info("  Creating peer connections...")
         connections_made = 0
@@ -573,8 +592,8 @@ class ssb_network_simulator:
             else:  # fixed
                 num_friends = min(self.friends_fixed, self.num_nodes - 1)
             
-            self.logger.info(f"  {node['name']}: connecting to {num_friends} peers...")
-            self.logger.debug(f"    Mode: {self.friends_mode}, Count: {num_friends}")
+            self.logger.info(f"     {node['name']}: connecting to {num_friends} peers...")
+            self.logger.debug(f"     Mode: {self.friends_mode}, Count: {num_friends}")
             
             # Select random friends (excluding self)
             available_friends = [j for j in range(len(self.nodes)) if j != i and 'info' in self.nodes[j]]
@@ -597,11 +616,9 @@ class ssb_network_simulator:
                 'count': len(node_connections)
             })
             
-            self.logger.debug(f"    Connected to: {', '.join(node_connections)}")
+            self.logger.debug(f"     Connected to: {', '.join(node_connections)}")
         
-        connections_duration = time.time() - connections_start
-        
-        self.logger.info(f"  Connections complete: {connections_made} successful, {connections_failed} failed ({connections_duration:.2f}s)")
+        self.logger.info(f"  Connections complete: {connections_made} successful, {connections_failed} failed")
         
         # Log detailed connection matrix
         self.logger.debug("Connection matrix:")
@@ -615,51 +632,7 @@ class ssb_network_simulator:
             'failed': connections_failed,
             'details': connection_details
         }
-    
-    def gossip_and_follow(self, node_a: Dict, node_b: Dict) -> bool:
-        self.logger.debug(f"    Connecting {node_a['name']} -> {node_b['name']}...")
-        
-        try:
-            #if they're in the same LAN, try somehting new and fun (use local address)
-            if node_a["lan_name"] != node_b["lan_name"]:
-                gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
-                result = node_a['container'].exec_run(gossip_cmd, stderr=True)
-
-                if result.exit_code != 0:
-                    self.logger.warning(f"         Gossip failed (exit {result.exit_code})")
-                    self.logger.debug(f"      Output: {result.output.decode()[:200]}")
-                    return False
-            
-                self.logger.debug(f"        Gossip successful")
-                #gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["lan_gossip_address"]}"'
-            # Gossip connect
-            #else:
-                #gossip_cmd = f'ssb-server gossip.connect "{node_b["info"]["address"]}"'
-            #self.logger.debug(f"      Gossip command: {gossip_cmd}")
-            
-            
-            
-            
-            # Follow
-            follow_cmd = f'ssb-server publish --type contact --contact "{node_b["info"]["id"]}" --following'
-            self.logger.debug(f"      Follow command: {follow_cmd}")
-            
-            result = node_a['container'].exec_run(follow_cmd, stderr=True)
-            
-            if result.exit_code != 0:
-                self.logger.warning(f"         Follow failed (exit {result.exit_code})")
-                self.logger.debug(f"      Output: {result.output.decode()[:200]}")
-                return False
-            
-            self.logger.debug(f"        Follow successful")
-            self.logger.info(f"      {node_a['name']} -> {node_b['name']}")
-            
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"      Error: {node_a['name']} -> {node_b['name']}: {e}")
-            return False
-        
+      
     def debug_container_status(self):
         self.logger.info("Debugging container status...")
     
@@ -677,8 +650,6 @@ class ssb_network_simulator:
                 self.logger.error(f"  Last 50 log lines:\n{logs}")
 
     def run(self):
-        overall_start = time.time()
-        
         print("\n" + "="*80)
         print("SSB NETWORK SIMULATOR")
         print("="*80 + "\n")
@@ -686,25 +657,35 @@ class ssb_network_simulator:
         self.logger.info("Starting network simulation...")
         
         try:
+            #get rid of existing Docker configuration
             self.cleanup_existing()
+            #creating Docker networks
+            # and filling in the self.networks[{"network": the docker network object
+            #                                 "name": 'ssb-sim-lan-1',
+            #                                 "subnet": "10.10.1.0/24",
+            #                                 "id": the docker network object id}]
             self.create_networks()
+            #starts up the router contaienr
             self.create_router()
+            #collect the ip addresses assigned to the router in each LAN
+            # and filling in the self.router_ips{ "ssb-sim-lan-1": 10.10.1.2,...}
             self.get_router_ips()
+            #creates the node containers and fills in self.nodes
             self.create_nodes()
+            #puts the /root/.ssb/config file into the node containers
             self.configure_nodes()
+            #giving each container a default gaateway of the router container (in that LAN)
             self.configure_node_gateways()
+            # ensure the contaienrs are okay
             self.debug_container_status()
             
             if not self.wait_for_nodes_ready():
                 self.logger.warning("Some nodes failed to start. Continuing anyway...")
             
             connection_stats = self.establish_connections()
-            #self.print_network_summary()
-            #self.save_network_config()
+        
             
-            overall_duration = time.time() - overall_start
-            
-            print(f"\nNetwork simulation setup complete! ({overall_duration:.2f}s)")
+            print(f"\nNetwork simulation setup complete!)")
             print(f"\nSummary:")
             print(f"  - Nodes created: {len(self.nodes)}")
             print(f"  - Connections: {connection_stats['successful']} successful, {connection_stats['failed']} failed")
@@ -716,7 +697,7 @@ class ssb_network_simulator:
             print(f"  python3 {__file__} --cleanup\n")
             
             self.logger.info("="*80)
-            self.logger.info(f"SIMULATION COMPLETE - Total time: {overall_duration:.2f}s")
+            self.logger.info(f"SIMULATION COMPLETE")
             self.logger.info("="*80)
             
         except KeyboardInterrupt:
@@ -815,8 +796,6 @@ def main():
         friends_mode=args.friends_mode,
         friends_range=(args.friends_min, args.friends_max),
         friends_fixed=args.friends_fixed,
-        #base_port=args.base_port,
-        #host_ip=args.host_ip,
         log_file=args.log_file,
         seed = args.seed
     )
@@ -837,27 +816,27 @@ def main():
             stats = prop_demo.run_baseline('ssb-sim-node-1')
             for node in simulator.nodes:
                 prop_demo._refresh_node_ip(node['name'])
-                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['cont_ip']}")
 
             author_drop_stats = prop_demo.run_author_dropout('ssb-sim-node-1')
             for node in simulator.nodes:
                 prop_demo._refresh_node_ip(node['name'])
-                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['cont_ip']}")
             
             local_drop_stats, local_drop_catchup_stats = prop_demo.run_lan_dropout('ssb-sim-node-1')
             for node in simulator.nodes:
                 prop_demo._refresh_node_ip(node['name'])
-                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['cont_ip']}")
 
             catch_up_stats1, catch_up_stats2 = prop_demo.run_dropout_catchup('ssb-sim-node-1')
             for node in simulator.nodes:
                 prop_demo._refresh_node_ip(node['name'])
-                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['cont_ip']}")
 
             prop_demo.run_lan_migration('ssb-sim-node-1')
             for node in simulator.nodes:
                 prop_demo._refresh_node_ip(node['name'])
-                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['cont_ip']}")
 
 
 
