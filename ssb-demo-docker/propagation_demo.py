@@ -622,7 +622,8 @@ class propagation_demo:
         for peer_name in direct:
             peer_address = self.nodes[peer_name]['info']['address']
             node['container'].exec_run(f'ssb-server gossip.connect "{peer_address}"')
-            self.simulator.logger.info(f"{node_name}: re-gossiped to {peer_name} at {new_ip}")
+            self.simulator.logger.info(f"{node_name}: re-gossiped to {peer_name} from {new_ip}")
+            self.simulator.logger.debug(f'ssb-server gossip.connect "{peer_address}"')
 
         migration_time = time.time() * 1000
         cmd = 'ssb-server publish --type post --text "Hi its me and ive changed LAN!!!"'

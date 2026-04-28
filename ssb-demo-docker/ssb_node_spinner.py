@@ -413,7 +413,7 @@ class ssb_network_simulator:
                 result = node['container'].exec_run(cmd, privileged=True)
 
                 if result.exit_code != 0:
-                    self.logger.warning( f" ROute failed on {node['name']} : {cmd}")
+                    self.logger.warning( f" Route failed on {node['name']} : {cmd}")
                 else:
                     self.logger.debug(f"    {node['name']}: route to {subnet} via {router_ip}")
     
@@ -835,14 +835,29 @@ def main():
 
             prop_demo = propagation_demo(simulator)
             stats = prop_demo.run_baseline('ssb-sim-node-1')
-       
+            for node in simulator.nodes:
+                prop_demo._refresh_node_ip(node['name'])
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
+
             author_drop_stats = prop_demo.run_author_dropout('ssb-sim-node-1')
+            for node in simulator.nodes:
+                prop_demo._refresh_node_ip(node['name'])
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
             
             local_drop_stats, local_drop_catchup_stats = prop_demo.run_lan_dropout('ssb-sim-node-1')
+            for node in simulator.nodes:
+                prop_demo._refresh_node_ip(node['name'])
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
 
             catch_up_stats1, catch_up_stats2 = prop_demo.run_dropout_catchup('ssb-sim-node-1')
+            for node in simulator.nodes:
+                prop_demo._refresh_node_ip(node['name'])
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
 
             prop_demo.run_lan_migration('ssb-sim-node-1')
+            for node in simulator.nodes:
+                prop_demo._refresh_node_ip(node['name'])
+                simulator.logger.debug(f"{node['name']}: refreshed IP to {node['lan_ip']}")
 
 
 
