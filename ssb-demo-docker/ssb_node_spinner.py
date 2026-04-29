@@ -323,9 +323,6 @@ class ssb_network_simulator:
                     hostname=node_name,
                     detach=True,
                     network=network_name,
-                    networking_config={
-                        network_name: self.client.api.create_endpoint_config(ipv4_address=static_ip)
-                    },
                     remove=False
                 )
                 
