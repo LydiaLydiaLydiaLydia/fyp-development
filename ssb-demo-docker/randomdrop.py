@@ -810,7 +810,7 @@ def main():
         if args.prop_demo:
             print("Propagation demonstration underway...")
             #adding networking conditions after connections are made, before scenarios
-            simulator.apply_network_conditions(bandwidth_kbit=17408, latency_ms=54)
+            simulator.apply_network_conditions(bandwidth_kbit=6861, latency_ms=101)
 
 
             prop_demo = propagation_demo(simulator)
