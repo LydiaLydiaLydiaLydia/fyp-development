@@ -821,6 +821,7 @@ def main():
 
 
             prop_demo = propagation_demo(simulator)
+            prop_demo.run_baseline('ssb-sim-node-1')
     
 
             catch_up_stats1, catch_up_stats2 = prop_demo.run_dropout_catchup('ssb-sim-node-1')

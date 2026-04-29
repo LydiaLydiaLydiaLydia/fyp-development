@@ -821,7 +821,7 @@ def main():
 
 
             prop_demo = propagation_demo(simulator)
-            #stats = prop_demo.run_baseline('ssb-sim-node-1')
+            stats = prop_demo.run_baseline('ssb-sim-node-1')
             #for node in simulator.nodes:
             #    prop_demo._refresh_node_ip(node['name'])
              #   simulator.logger.debug(f"{node['name']}: refreshed IP to {node['cont_ip']}")
