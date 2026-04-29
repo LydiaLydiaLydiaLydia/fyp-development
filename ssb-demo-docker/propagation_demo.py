@@ -1,3 +1,4 @@
+import csv
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from statistics import median
@@ -30,6 +31,7 @@ class scenario_result:
         self._log_result()
         self._print_result()
         self._plot_scenario()
+        self._write_csv()
 
     def _get_successes(self):
         return sum(1 for val in self.propagation_results.values() if val['received'])
@@ -151,6 +153,36 @@ class scenario_result:
         plt.close()
         if self.logger:
             self.logger.info(f"  Plot saved: {output_path}")
+
+    def _write_csv(self):
+        csv_path = self.logs_dir / "scenario_results.csv"
+        file_exists = csv_path.exists()
+
+        fieldnames = [
+            'scenario', 'message_id', 'posted_at', 'nodes_down',
+            'node', 'lan', 'received', 'elapsed_ms', 'elapsed_human',
+            'propagation_rate', 'median_elapsed_ms'
+        ]
+
+        with open(csv_path, 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+
+            for node_name, data in self.propagation_results.items():
+                writer.writerow({
+                    'scenario': self.name,
+                    'message_id': self.message_id,
+                    'posted_at': datetime.fromtimestamp(self.posted_at / 1000).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3],
+                    'nodes_down': ';'.join(self.nodes_down) if self.nodes_down else '',
+                    'node': node_name,
+                    'lan': data['lan'],
+                    'received': data['received'],
+                    'elapsed_ms': data['elapsed'] if data['received'] else '',
+                    'elapsed_human': data['elapsed_human'] if data['received'] else '',
+                    'propagation_rate': f"{self.propagation_rate:.4f}",
+                    'median_elapsed_ms': self.median_elapsed,
+                })
 
 
 class propagation_demo:
