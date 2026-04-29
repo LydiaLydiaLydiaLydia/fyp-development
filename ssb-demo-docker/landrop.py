@@ -68,7 +68,7 @@ class ssb_network_simulator:
     def _setup_logging(self):
         # Create logger (level is debug)
         self.logger = logging.getLogger('SSBSimulator')
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         
         # Clear any existing handlers
         self.logger.handlers = []
@@ -76,7 +76,7 @@ class ssb_network_simulator:
         # File handler (DEBUG level - everything)
         ## mode 'w' write, rather than 'a' append
         file_handler = logging.FileHandler(self.log_file, mode='w', encoding='utf-8')
-        file_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(logging.INFO)
         file_formatter = logging.Formatter(
             '%(asctime)s | %(levelname)-8s | %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
