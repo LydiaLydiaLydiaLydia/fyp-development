@@ -304,7 +304,18 @@ class propagation_demo:
         return b_peers
 
     def restart_node(self, node_name, bootstrap_peers=None, feeds_to_request=None):
-        self.nodes[node_name]['container'].start()
+        #adding in this block to ensure static ip assignment
+        #the node will be conected to the network with the same IP address
+        node = self.nodes[node_name]
+        container = node['container']
+        network_name = node['lan_name']
+        static_ip = node['cont_ip']
+
+        network = self.simulator.client.networks.get(network_name)
+        network.disconnect(container)
+        network.connect(container, ipv4_address = static_ip)
+
+        container.start()
         self.simulator.logger.info(f"Restarted {node_name}, waiting for SSB to be ready...")
 
         time.sleep(2)
@@ -324,7 +335,7 @@ class propagation_demo:
             time.sleep(2)
 
         self._refresh_node_ip(node_name)
-        self.nodes[node_name]['container'].exec_run('ssb-server start', stderr=False)
+        container.exec_run('ssb-server start', stderr=False)
 
         if bootstrap_peers:
             for peer in bootstrap_peers:
